@@ -1,0 +1,335 @@
+--[[
+	debugger.lua is intended to be a very simple, pure Lua CLI debugger.
+	In theory this should make it easy to simply drop into any existing Lua based project.
+	
+	TODO finish documentation
+]]
+
+--[[
+	TODO:
+	print short function arguments as part of stack location
+	bug: sometimes doesn't advance to next line (same line event reported multiple times)
+	do coroutines work as expected?
+]]
+
+local function pretty(obj, non_recursive)
+	if type(obj) == "string" then
+		return string.format("%q", obj)
+	elseif type(obj) == "table" and not non_recursive then
+		local str = "{"
+		
+		for k, v in pairs(obj) do
+			local pair = pretty(k, true).." = "..pretty(v, true)
+			str = str..(str == "{" and pair or ", "..pair)
+		end
+		
+		return str.."}"
+	else
+		return tostring(obj)
+	end
+end
+
+local help_message = [[
+[return] - re-run last command
+c(ontinue) - contiue execution
+s(tep) - step forward by one line (into functions)
+n(ext) - step forward by one line (skipping over functions)
+p [expression] - execute the expression and print the result
+f(inish) - step forward until exiting the current function
+u(p) - move up the stack pointer by one call
+d(own) - move the stock pointer down by one call
+t(race) - print the stack trace
+l(ocals) - print the function arguments and locals
+h(elp) - print this message
+]]
+
+-- The stack level that cmd_* functions use to access locals or info
+local LOCAL_STACK_LEVEL = 5
+
+-- Extra stack frames to chop off.
+-- Used for things like dbgcall() or the overridden assert/error functions
+local stack_top = 0
+
+-- The current stack frame index.
+-- Changed using the up/down commands
+local stack_offset = 0
+
+-- Override if you don't want to use stdin
+local function dbg_read()
+	return io.read()
+end
+
+-- Override if you don't want to use stdout.
+local function dbg_write(str, ...)
+	io.write(string.format(str, ...))
+end
+
+local function dbg_writeln(str, ...)
+	dbg_write((str or "").."\n", ...)
+end
+
+local function formatStackLocation(info)
+	local fname = (info.name or string.format("<%s:%d>", info.short_src, info.linedefined))
+	return string.format("%s:%d in function '%s'", info.short_src, info.currentline, fname)
+end
+
+local repl
+
+local function hook_factory(repl_threshold)
+	return function(offset)
+		return function(event, line)
+			local info = debug.getinfo(2)
+			
+			if event == "call" and info.linedefined >= 0 then
+				offset = offset + 1
+			elseif event == "return" and info.linedefined >= 0 then
+				if offset <= repl_threshold then
+					-- TODO this is what causes the duplicated lines
+					-- Don't remember why this is even here...
+					--repl()
+				else
+					offset = offset - 1
+				end
+			elseif event == "line" and offset <= repl_threshold then
+				repl()
+			end
+		end
+	end
+end
+
+local hook_step = hook_factory(1)
+local hook_next = hook_factory(0)
+local hook_finish = hook_factory(-1)
+
+local function table_copy(t)
+	local copy = {}
+	for k, v in pairs(t) do copy[k] = v end
+	
+	return copy
+end
+
+local VARARG_SENTINEL = "(*varargs)"
+
+local function local_env(offset, globals)
+	--[[ TODO
+		Need to figure out how to get varargs with LuaJIT
+	]]
+	
+	local bindings = table_copy(globals)
+	local level = stack_offset + offset + LOCAL_STACK_LEVEL
+	local func = debug.getinfo(level).func
+	
+	do local i = 1; repeat
+		name, value = debug.getupvalue(func, i)
+		if name then bindings[name] = value end
+		i = i + 1
+	until name == nil end
+	
+	do local i = 1; repeat
+		name, value = debug.getlocal(level, i)
+		if name then bindings[name] = value end
+		i = i + 1
+	until name == nil end
+	
+	local varargs = {}
+	do local i = -1; repeat
+		name, value = debug.getlocal(level, i)
+		table.insert(varargs, value)
+		i = i - 1
+	until name == nil end
+	bindings[VARARG_SENTINEL] = varargs
+	
+	return bindings
+end
+
+local function compile_chunk(expr, env)
+	if _VERSION == "Lua 5.1" then
+		local chunk = loadstring("return "..expr, "<debugger repl>")
+		if chunk then setfenv(chunk, env) end
+		return chunk
+	else
+		-- The Lua 5.2 way is a bit cleaner
+		return load("return "..expr, "<debugger repl>", "t", env)
+	end
+end
+
+local function guess_len(results)
+	local max = 0
+	for i=1, 256 do
+		if results[i] then max = i end
+	end
+	
+	return max
+end
+
+local function cmd_print(expr)
+	local env = local_env(1, _G)
+	local chunk = compile_chunk(expr, env)
+	if chunk == nil then
+		dbg_writeln("Error: Could not evaluate expression.")
+		return false
+	end
+	
+	results = {pcall(chunk, unpack(env[VARARG_SENTINEL]))}
+	if not results[1] then
+		dbg_writeln("Error: %s", results[2])
+	elseif #results == 1 then
+		dbg_writeln(expr.." => nil")
+	else
+		local result = ""
+		for i=2, guess_len(results) do
+			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
+		end
+		
+		dbg_writeln(expr.." => "..result)
+	end
+	
+	return false
+end
+
+local function cmd_up()
+	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL + 1)
+	
+	if info then
+		stack_offset = stack_offset + 1
+		dbg_writeln(formatStackLocation(info))
+	else
+		dbg_writeln("Error: Already at the top of the stack.")
+	end
+	
+	return false
+end
+
+local function cmd_down()
+	if stack_offset > stack_top then
+		stack_offset = stack_offset - 1
+		
+		local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+		dbg_writeln(formatStackLocation(info))
+	else
+		dbg_writeln("Error: Already at the bottom of the stack.")
+	end
+	
+	return false
+end
+
+local function cmd_trace()
+	local location = formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
+	local offset = stack_offset - stack_top
+	local message = string.format("At stack location %d - (%s)", offset, location)
+	dbg_writeln(debug.traceback(message, stack_offset + LOCAL_STACK_LEVEL))
+	
+	return false
+end
+
+local function cmd_locals()
+	for k, v in pairs(local_env(1, {})) do
+		dbg_writeln("\t%s => %s", k, pretty(v))
+	end
+	
+	return false
+end
+
+local function cmd_help()
+	dbg_writeln(help_message)
+	return false
+end
+
+local last_cmd = false
+
+-- Run a command line
+-- Returns true if the REPL should exit and the hook function factory
+local function run_command(line)
+	-- Execute the previous command or cache it
+	if line == "" then
+		if last_cmd then return unpack({run_command(last_cmd)}) else return false end
+	else
+		last_cmd = line
+	end
+	
+	local commands = {
+		["c"] = function() return true end,
+		["s"] = function() return true, hook_step end,
+		["n"] = function() return true, hook_next end,
+		["f"] = function() return true, hook_finish end,
+		["p%s?(.*)"] = cmd_print,
+		["u"] = cmd_up,
+		["d"] = cmd_down,
+		["t"] = cmd_trace,
+		["l"] = cmd_locals,
+		["h"] = cmd_help,
+	}
+	
+	for cmd, cmd_func in pairs(commands) do
+		local matches = {string.match(line, "^("..cmd..")$")}
+		if matches[1] then
+			return unpack({cmd_func(select(2, unpack(matches)))})
+		end
+	end
+	
+	dbg_writeln("Error: command '%s' not recognized", line)
+	return false
+end
+
+repl = function()
+	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 2 + stack_offset)))
+	
+	repeat
+		dbg_write("debugger.lua> ")
+		local done, hook = run_command(dbg_read())
+		debug.sethook(hook and hook(0), "crl")
+	until done
+end
+
+local dbg = setmetatable({}, {
+	__call = function(self, condition, offset)
+		if condition then return end
+		
+		offset = (offset or 0)
+		stack_offset = offset
+		stack_top = offset
+		
+		debug.sethook(hook_next(1), "crl")
+		return
+	end,
+})
+
+dbg.write = dbg_write
+dbg.writeln = dbg_writeln
+
+function dbg.error(err)
+	dbg_writeln("Debugger stopped on error(%s)", pretty(err))
+	dbg(false, 1)
+	error(err)
+end
+
+function dbg.assert(condition, message)
+	if not condition then
+		dbg_writeln("Debugger stopped on assert(..., %s)", message)
+		dbg(false, 1)
+	end
+	assert(condition, message)
+end
+
+function dbg.call(f, l)
+	return (xpcall(f, function(err)
+		dbg_writeln("Debugger stopped on error: "..pretty(err))
+		return (dbg(false, (l or 0) + 1))
+	end))
+end
+	
+if jit and
+	jit.version == "LuaJIT 2.0.0-beta10"
+then
+	dbg_writeln("debug.lua initialized for "..jit.version)
+elseif
+	 _VERSION == "Lua 5.2" or
+	 _VERSION == "Lua 5.1"	 
+then
+	dbg_writeln("debug.lua initialized for ".._VERSION)
+else
+	dbg_writeln("debug.lua not tested against ".._VERSION)
+	dbg_writeln("Please send me feedback!")
+end
+
+return dbg
