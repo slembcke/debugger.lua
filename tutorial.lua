@@ -246,6 +246,9 @@ print[[
 	Wrap it around your program's main loop or main entry point.
 	Then when your program crashes, you won't need to go back
 	and add breakpoints.
+	
+	That pretty much wraps ups the basics.
+	Hopefully you find debugger.lua to be simple but useful.
 ]]
 
 dbg.call(function()

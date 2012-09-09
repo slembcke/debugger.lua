@@ -1,11 +1,4 @@
 --[[
-	debugger.lua is intended to be a very simple, pure Lua CLI debugger.
-	In theory this should make it easy to simply drop into any existing Lua based project.
-	
-	TODO finish documentation
-]]
-
---[[
 	TODO:
 	print short function arguments as part of stack location
 	bug: sometimes doesn't advance to next line (same line event reported multiple times)
@@ -34,10 +27,10 @@ local help_message = [[
 c(ontinue) - contiue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
-p [expression] - execute the expression and print the result
+p(rint) [expression] - execute the expression and print the result
 f(inish) - step forward until exiting the current function
-u(p) - move up the stack pointer by one call
-d(own) - move the stock pointer down by one call
+u(p) - move up the stack by one frame
+d(own) - move down the stack by one frame
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
