@@ -224,7 +224,10 @@ end
 
 local function cmd_locals()
 	for k, v in pairs(local_env(1, {})) do
-		dbg_writeln("\t%s => %s", k, pretty(v))
+		-- Don't print the Lua 5.2 __ENV local. It's pretty huge and useless to see.
+		if k ~= "_ENV" then
+			dbg_writeln("\t%s => %s", k, pretty(v))
+		end
 	end
 	
 	return false
