@@ -1,3 +1,4 @@
+-- Load up the debugger module and assign it to a variable.
 local dbg = require("debugger")
 print()
 
@@ -7,18 +8,21 @@ print[[
 ]]
 
 print[[
+	You are now in the debugger! (Woo! \o/).
 	debugger.lua doesn't support traditional breakpoints.
 	Instead you call the dbg() object to set a breakpoint.
 	
-	You are now in the debugger! (Woo! \o/).
 	Notice how it prints out your current file and
 	line as well as which function you are in.
+	Keep a close watch on this as you follow along.
+	It should be at line XXX, a line after the dbg() call.
+	
 	Sometimes functions don't have global names.
 	It might print the method name, local variable
 	that held the function, or file:line where it starts.
 	
 	Type 's' to step to the next line.
-	(s = step to the next executable line)
+	(s = Step to the next executable line)
 ]]
 
 -- Multi-line strings are executable statements apparently
@@ -27,8 +31,12 @@ local str1 = [[
 	The 's' command steps to the next executable line.
 	This may step you into a function call.
 	
+	In this case, then next line was a C function that printed this message.
+	You can't step into C functions, so it just steps over them.
+	
 	If you hit <return>, the debugger will rerun your last command.
-	Hit <return> 5 times to step through the next function.
+	Hit <return> 5 times to step into and through func1().
+	Watch the line numbers.
 ]]
 
 local str2 = [[
@@ -37,7 +45,7 @@ local str2 = [[
 	Notice how entering and exiting a function takes a step.
 	
 	Now try the 'n' command.
-	(n = step to the next line in the source code)
+	(n = step to the Next line in the source code)
 ]]
 
 local function func1()
@@ -62,7 +70,7 @@ local function func2()
 	calls, not into them.
 	
 	Now try the 'c' command to continue on to the next breakpoint.
-	(c =  continue execution)
+	(c =  Continue execution)
 ]]
 end
 
@@ -76,25 +84,25 @@ func2()
 
 local function func3()
 	print[[
-	You are now sitting at a breakpoint inside of a function.
+	You are now sitting at a breakpoint inside of a func3().
 	Let's say you got here by stepping into the function.
 	After poking around for a bit, you just want to step until the
 	function returns, but don't want to
 	run the next command over and over.
 	
 	For this you would use the 'f' command. Try it now.
-	(f = finish current function)
+	(f = Finish current function)
 ]]
 	
 	dbg()
 	
 	print[[
-	Now you are sitting inside func4().
-	It has some arguments, local variables and upvalues.
+	Now you are inside func4(), right after where it called func3().
+	func4() has some arguments, local variables and upvalues.
 	Let's assume you want to see them.
 	
 	Try the 'l' command to list all the locally available variables.
-	(l = local variables)
+	(l = Local variables)
 	
 	Type 'c' to continue on to the next section.
 ]]
@@ -148,58 +156,74 @@ function func4(a, b, ...)
 	In Lua 5.1 or LuaJIT you need to copy
 	the varargs into a table and unpack them:
 	p select(2, unpack(varargs_copy))
+	
+	Type 'c' to continue to the next section.
 ]]
 	dbg()
 end
 
 func4(1, "two", "vararg1", "vararg2", "vararg3")
 
--- TODO trace
--- TODO up/down
--- TODO help
-
--- TODO printing varargs and closures
-
-local function func2(a, b, c)
-	local sum = b + c
-	print(b, c)
+local function func5()
+	local my_var = "func5()"
+	print[[
+	You are now in func5() which was called from func6().
+	func6() was called from func7().
 	
-	return function()
-		print[[
-	This is a closue with some upvalues.
-	Try printing them with the 'p' command.
-	Note that you can print the value of 'a' and 'sum', but not 'b'.
-	'b' is not referenced by the closure, so it's read as an undefined global variable.
+	Try the 't' command to print out a backtrace and see for yourself.
+	(t = backTrace)
+	
+	Type 'c' to continue to the next section
 ]]
-		
-		print(a, sum)
-		dbg()
-	end
-end
-
-local function func3(d, e, ...)
-	-- Lua 5.1 doesn't expose varargs to the debug interface.
-	-- You'll need to make a local variable copyf of them if you want to inspect them.
-	local varargs = {...}
+	dbg()
 	
-	-- Return the closure that func1() returns
-	return func2(d, ...)
+	print[[
+	Notice that func5(), func6() and func7() all have a
+	'my_var' local. You can print the func5()'s my_var easily enough.
+	What if you wanted to see what local variables were in func6()
+	or func7() to see how you got where you were?
+	
+	For that you use the 'u' and 'd' commands.
+	(u = move Up a stack frame)
+	(d = move Down a stack frame)
+	
+	Try the 'u' and 'd' commands a few times.
+	Print out the value of my_var using the 'p' command each time.
+	
+	Type 'c' to continue.
+]]
+	dbg()
 end
 
--- call func2 and save the closure it returns
-local f = func2(1, 2, 3, 4)
+local function func6()
+	local my_var = "func6()"
+	func5()
+end
+
+local function func7()
+	local my_var = "func7()"
+	func6()
+end
+
+func7()
 
 print[[
-	Now type 'c' to step into the closure function
+	That leaves only one more command.
+	Wouldn't it be nice if there was a way to remember
+	all these one letter debugger commands?
+	
+	Type 'h' to show the command list.
+	(h = Help)
+	
+	Type 'c' to continue.
 ]]
-
 dbg()
-f()
 
 print[[
 	The following loop uses an assert-style breakpoint.
 	It will only engage when the conditional fails. (when i == 5)
-	Type 'c' to continue afterwards.
+	
+	Type 'c' to continue.
 ]]
 
 for i=0, 10 do
@@ -208,6 +232,27 @@ for i=0, 10 do
 	dbg(i ~= 5)
 end
 
--- Optionally you can redefine assert() and error() to invoke the debugger as well
-assert = dbg.assert
-error = dbg.error
+print[[
+	Last but not least, is the dbg.call() function.
+	It works sort of like Lua's xpcall() function,
+	but starts the debugger when an uncaught error occurs.
+	Note that dbg.call() does *not* take a list of varargs though.
+	You must call it on a function that takes no arguments.
+	
+	dbg.call(function()
+		-- Potentially buggy code goes here.
+	end)
+	
+	Wrap it around your program's main loop or main entry point.
+	Then when your program crashes, you won't need to go back
+	and add breakpoints.
+]]
+
+dbg.call(function()
+	local foo = "foo"
+	
+	-- Try adding a string and integer
+	local bar = foo + 12
+	
+	-- Program never makes it to here...
+end)

@@ -39,7 +39,7 @@ f(inish) - step forward until exiting the current function
 u(p) - move up the stack pointer by one call
 d(own) - move the stock pointer down by one call
 t(race) - print the stack trace
-l(ocals) - print the function arguments and locals
+l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
 ]]
 
@@ -192,7 +192,7 @@ local function cmd_up()
 	
 	if info then
 		stack_offset = stack_offset + 1
-		dbg_writeln(formatStackLocation(info))
+		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
 		dbg_writeln("Error: Already at the top of the stack.")
 	end
@@ -205,7 +205,7 @@ local function cmd_down()
 		stack_offset = stack_offset - 1
 		
 		local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
-		dbg_writeln(formatStackLocation(info))
+		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
 		dbg_writeln("Error: Already at the bottom of the stack.")
 	end
@@ -216,7 +216,7 @@ end
 local function cmd_trace()
 	local location = formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
-	local message = string.format("At stack location %d - (%s)", offset, location)
+	local message = string.format("Inspecting frame: %d - (%s)", offset, location)
 	dbg_writeln(debug.traceback(message, stack_offset + LOCAL_STACK_LEVEL))
 	
 	return false
@@ -275,7 +275,7 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 2 + stack_offset)))
+	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 2 + stack_top)))
 	
 	repeat
 		dbg_write("debugger.lua> ")
@@ -317,7 +317,8 @@ end
 function dbg.call(f, l)
 	return (xpcall(f, function(err)
 		dbg_writeln("Debugger stopped on error: "..pretty(err))
-		return (dbg(false, (l or 0) + 1))
+		dbg(false, (l or 0) + 1)
+		return
 	end))
 end
 	
