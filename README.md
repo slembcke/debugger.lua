@@ -33,11 +33,11 @@ First of all, there is nothing to install. Just drop debugger.lua into your proj
 		-- Calling dbg() will enter the debugger on the next executable line, right before it calls print().
 		-- Once in the debugger, you will be able to step around and inspect things.
 		dbg()
-    
-    -- Maybe you only want to start the debugger on a certain condition.
-    -- If you pass a value to dbg(), it works like an assert statement.
-    -- The debugger only triggers if it's nil or false.
-    dbg(5 == 5) -- Will be ignored
+		
+		-- Maybe you only want to start the debugger on a certain condition.
+		-- If you pass a value to dbg(), it works like an assert statement.
+		-- The debugger only triggers if it's nil or false.
+		dbg(5 == 5) -- Will be ignored
 		
 		print("Fooooo!!!!")
 	end
