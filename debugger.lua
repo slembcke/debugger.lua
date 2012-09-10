@@ -159,13 +159,8 @@ local function compile_chunk(expr, env)
 	end
 end
 
-local function guess_len(results)
-	local max = 0
-	for i=1, 256 do
-		if not rawequal(results[i], nil) then max = i end
-	end
-	
-	return max
+local function super_pack(...)
+	return select("#", ...), {...}
 end
 
 local function cmd_print(expr)
@@ -176,14 +171,14 @@ local function cmd_print(expr)
 		return false
 	end
 	
-	local results = {pcall(chunk, unpack(env[VARARG_SENTINEL]))}
+	local count, results = super_pack(pcall(chunk, unpack(env[VARARG_SENTINEL])))
 	if not results[1] then
 		dbg_writeln("Error: %s", results[2])
-	elseif #results == 1 then
-		dbg_writeln(expr.." => nil")
+	elseif count == 1 then
+		dbg_writeln("Error: No expression to execute")
 	else
 		local result = ""
-		for i=2, guess_len(results) do
+		for i=2, count do
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
@@ -285,8 +280,6 @@ repl = function()
 	
 	repeat
 		dbg_write("debugger.lua> ")
---		local done, hook = run_command(dbg_read())
---		debug.sethook(hook and hook(0), "crl")
 		
 		local success, done, hook = pcall(run_command, dbg_read())
 		if success then
