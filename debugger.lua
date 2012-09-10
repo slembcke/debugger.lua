@@ -94,36 +94,40 @@ local hook_step = hook_factory(1)
 local hook_next = hook_factory(0)
 local hook_finish = hook_factory(-1)
 
-local function table_copy(t)
-	local copy = {}
-	for k, v in pairs(t) do copy[k] = v end
+local function table_merge(t1, t2)
+	local tbl = {}
+	for k, v in pairs(t1) do tbl[k] = v end
+	for k, v in pairs(t2) do tbl[k] = v end
 	
-	return copy
+	return tbl
 end
 
 local VARARG_SENTINEL = "(*varargs)"
 
-local function local_env(offset, globals)
+local function local_bindings(offset, include_globals)
 	--[[ TODO
 		Need to figure out how to get varargs with LuaJIT
 	]]
 	
-	local bindings = table_copy(globals)
 	local level = stack_offset + offset + LOCAL_STACK_LEVEL
 	local func = debug.getinfo(level).func
+	local bindings = {}
 	
+	-- Retrieve the upvalues
 	do local i = 1; repeat
 		name, value = debug.getupvalue(func, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
 	
+	-- Retrieve the locals (overwriting any upvalues)
 	do local i = 1; repeat
 		name, value = debug.getlocal(level, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
 	
+	-- Retrieve the varargs. (only works in Lua 5.2)
 	local varargs = {}
 	do local i = -1; repeat
 		name, value = debug.getlocal(level, i)
@@ -132,11 +136,18 @@ local function local_env(offset, globals)
 	until name == nil end
 	bindings[VARARG_SENTINEL] = varargs
 	
-	return bindings
+	if include_globals then
+		-- Merge the local bindings over the top of the environment table.
+		-- In Lua 5.2, you have to get the environment table from the function's locals.
+		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
+		return table_merge(env, bindings)
+	else
+		return bindings
+	end
 end
 
 local function compile_chunk(expr, env)
-	if _VERSION == "Lua 5.1" then
+	if _VERSION <= "Lua 5.1" then
 		local chunk = loadstring("return "..expr, "<debugger repl>")
 		if chunk then setfenv(chunk, env) end
 		return chunk
@@ -156,7 +167,7 @@ local function guess_len(results)
 end
 
 local function cmd_print(expr)
-	local env = local_env(1, _G)
+	local env = local_bindings(1, true)
 	local chunk = compile_chunk(expr, env)
 	if chunk == nil then
 		dbg_writeln("Error: Could not evaluate expression.")
@@ -216,7 +227,7 @@ local function cmd_trace()
 end
 
 local function cmd_locals()
-	for k, v in pairs(local_env(1, {})) do
+	for k, v in pairs(local_bindings(1, false)) do
 		-- Don't print the Lua 5.2 __ENV local. It's pretty huge and useless to see.
 		if k ~= "_ENV" then
 			dbg_writeln("\t%s => %s", k, pretty(v))
@@ -292,11 +303,12 @@ local dbg = setmetatable({}, {
 
 dbg.write = dbg_write
 dbg.writeln = dbg_writeln
+dbg.pretty = pretty
 
-function dbg.error(err)
+function dbg.error(err, level)
 	dbg_writeln("Debugger stopped on error(%s)", pretty(err))
-	dbg(false, 1)
-	error(err)
+	dbg(false, level + 1)
+	error(err, level)
 end
 
 function dbg.assert(condition, message)
@@ -314,7 +326,7 @@ function dbg.call(f, l)
 		return
 	end))
 end
-	
+
 if jit and
 	jit.version == "LuaJIT 2.0.0-beta10"
 then
