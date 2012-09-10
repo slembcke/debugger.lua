@@ -37,7 +37,7 @@ h(elp) - print this message
 ]]
 
 -- The stack level that cmd_* functions use to access locals or info
-local LOCAL_STACK_LEVEL = 5
+local LOCAL_STACK_LEVEL = 6
 
 -- Extra stack frames to chop off.
 -- Used for things like dbgcall() or the overridden assert/error functions
@@ -115,14 +115,14 @@ local function local_bindings(offset, include_globals)
 	
 	-- Retrieve the upvalues
 	do local i = 1; repeat
-		name, value = debug.getupvalue(func, i)
+		local name, value = debug.getupvalue(func, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
 	
 	-- Retrieve the locals (overwriting any upvalues)
 	do local i = 1; repeat
-		name, value = debug.getlocal(level, i)
+		local name, value = debug.getlocal(level, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
@@ -130,7 +130,7 @@ local function local_bindings(offset, include_globals)
 	-- Retrieve the varargs. (only works in Lua 5.2)
 	local varargs = {}
 	do local i = -1; repeat
-		name, value = debug.getlocal(level, i)
+		local name, value = debug.getlocal(level, i)
 		table.insert(varargs, value)
 		i = i - 1
 	until name == nil end
@@ -140,7 +140,9 @@ local function local_bindings(offset, include_globals)
 		-- Merge the local bindings over the top of the environment table.
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
-		return table_merge(env, bindings)
+		
+		-- Finally, merge the tables and add a lookup for globals.
+		return setmetatable(table_merge(env, bindings), {__index = _G})
 	else
 		return bindings
 	end
@@ -160,7 +162,7 @@ end
 local function guess_len(results)
 	local max = 0
 	for i=1, 256 do
-		if results[i] then max = i end
+		if not rawequal(results[i], nil) then max = i end
 	end
 	
 	return max
@@ -174,7 +176,7 @@ local function cmd_print(expr)
 		return false
 	end
 	
-	results = {pcall(chunk, unpack(env[VARARG_SENTINEL]))}
+	local results = {pcall(chunk, unpack(env[VARARG_SENTINEL]))}
 	if not results[1] then
 		dbg_writeln("Error: %s", results[2])
 	elseif #results == 1 then
@@ -279,12 +281,21 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 2 + stack_top)))
+	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
 	
 	repeat
 		dbg_write("debugger.lua> ")
-		local done, hook = run_command(dbg_read())
-		debug.sethook(hook and hook(0), "crl")
+--		local done, hook = run_command(dbg_read())
+--		debug.sethook(hook and hook(0), "crl")
+		
+		local success, done, hook = pcall(run_command, dbg_read())
+		if success then
+			debug.sethook(hook and hook(0), "crl")
+		else
+			local message = string.format("INTERNAL DEBUGGER.LUA ERROR. ABORTING\n: %s", done)
+			dbg_writeln(message)
+			error(message)
+		end
 	until done
 end
 
@@ -306,8 +317,9 @@ dbg.writeln = dbg_writeln
 dbg.pretty = pretty
 
 function dbg.error(err, level)
+	level = level or 1
 	dbg_writeln("Debugger stopped on error(%s)", pretty(err))
-	dbg(false, level + 1)
+	dbg(false, level)
 	error(err, level)
 end
 
