@@ -355,9 +355,11 @@ local function luajit_load_readline_support()
 		if cstr ~= nil then
 			local str = ffi.string(cstr)
 			
-			readline.add_history(cstr)
-			ffi.C.free(cstr)
+			if string.match(str, "[^%s]+") then
+				readline.add_history(cstr)
+			end
 			
+			ffi.C.free(cstr)
 			return str
 		else
 			return nil
