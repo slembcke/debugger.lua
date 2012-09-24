@@ -37,7 +37,7 @@ h(elp) - print this message
 ]]
 
 -- The stack level that cmd_* functions use to access locals or info
-local LOCAL_STACK_LEVEL = 5
+local LOCAL_STACK_LEVEL = 6
 
 -- Extra stack frames to chop off.
 -- Used for things like dbgcall() or the overridden assert/error functions
@@ -48,10 +48,6 @@ local stack_top = 0
 local stack_offset = 0
 
 -- Override if you don't want to use stdin
-local function dbg_read()
-	return io.read()
-end
-
 -- Override if you don't want to use stdout.
 local function dbg_write(str, ...)
 	io.write(string.format(str, ...))
@@ -59,6 +55,11 @@ end
 
 local function dbg_writeln(str, ...)
 	dbg_write((str or "").."\n", ...)
+end
+
+local function dbg_read(prompt)
+	dbg_write(prompt)
+	return io.read()
 end
 
 local function formatStackLocation(info)
@@ -115,14 +116,14 @@ local function local_bindings(offset, include_globals)
 	
 	-- Retrieve the upvalues
 	do local i = 1; repeat
-		name, value = debug.getupvalue(func, i)
+		local name, value = debug.getupvalue(func, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
 	
 	-- Retrieve the locals (overwriting any upvalues)
 	do local i = 1; repeat
-		name, value = debug.getlocal(level, i)
+		local name, value = debug.getlocal(level, i)
 		if name then bindings[name] = value end
 		i = i + 1
 	until name == nil end
@@ -130,7 +131,7 @@ local function local_bindings(offset, include_globals)
 	-- Retrieve the varargs. (only works in Lua 5.2)
 	local varargs = {}
 	do local i = -1; repeat
-		name, value = debug.getlocal(level, i)
+		local name, value = debug.getlocal(level, i)
 		table.insert(varargs, value)
 		i = i - 1
 	until name == nil end
@@ -140,7 +141,9 @@ local function local_bindings(offset, include_globals)
 		-- Merge the local bindings over the top of the environment table.
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
-		return table_merge(env, bindings)
+		
+		-- Finally, merge the tables and add a lookup for globals.
+		return setmetatable(table_merge(env, bindings), {__index = _G})
 	else
 		return bindings
 	end
@@ -157,13 +160,8 @@ local function compile_chunk(expr, env)
 	end
 end
 
-local function guess_len(results)
-	local max = 0
-	for i=1, 256 do
-		if results[i] then max = i end
-	end
-	
-	return max
+local function super_pack(...)
+	return select("#", ...), {...}
 end
 
 local function cmd_print(expr)
@@ -174,14 +172,14 @@ local function cmd_print(expr)
 		return false
 	end
 	
-	results = {pcall(chunk, unpack(env[VARARG_SENTINEL]))}
+	local count, results = super_pack(pcall(chunk, unpack(env[VARARG_SENTINEL])))
 	if not results[1] then
 		dbg_writeln("Error: %s", results[2])
-	elseif #results == 1 then
-		dbg_writeln(expr.." => nil")
+	elseif count == 1 then
+		dbg_writeln("Error: No expression to execute")
 	else
 		local result = ""
-		for i=2, guess_len(results) do
+		for i=2, count do
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
@@ -247,6 +245,12 @@ local last_cmd = false
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
+	-- Continue without caching the command if you hit control-d.
+	if line == nil then
+		dbg_writeln()
+		return true
+	end
+	
 	-- Execute the previous command or cache it
 	if line == "" then
 		if last_cmd then return unpack({run_command(last_cmd)}) else return false end
@@ -279,12 +283,17 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 2 + stack_top)))
+	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
 	
 	repeat
-		dbg_write("debugger.lua> ")
-		local done, hook = run_command(dbg_read())
-		debug.sethook(hook and hook(0), "crl")
+		local success, done, hook = pcall(run_command, dbg_read("debugger.lua> "))
+		if success then
+			debug.sethook(hook and hook(0), "crl")
+		else
+			local message = string.format("INTERNAL DEBUGGER.LUA ERROR. ABORTING\n: %s", done)
+			dbg_writeln(message)
+			error(message)
+		end
 	until done
 end
 
@@ -306,8 +315,9 @@ dbg.writeln = dbg_writeln
 dbg.pretty = pretty
 
 function dbg.error(err, level)
+	level = level or 1
 	dbg_writeln("Debugger stopped on error(%s)", pretty(err))
-	dbg(false, level + 1)
+	dbg(false, level)
 	error(err, level)
 end
 
@@ -327,17 +337,48 @@ function dbg.call(f, l)
 	end))
 end
 
+local function luajit_load_readline_support()
+	local ffi = require("ffi")
+	
+	ffi.cdef[[
+		void free(void *ptr);
+		
+		char *readline(const char *);
+		int add_history(const char *);
+	]]
+	
+	local readline = ffi.load("readline")
+	
+	dbg_read = function(prompt)
+		local cstr = readline.readline(prompt)
+		
+		if cstr ~= nil then
+			local str = ffi.string(cstr)
+			
+			readline.add_history(cstr)
+			ffi.C.free(cstr)
+			
+			return str
+		else
+			return nil
+		end
+	end
+	
+	dbg_writeln("Readline support loaded.")
+end
+
 if jit and
 	jit.version == "LuaJIT 2.0.0-beta10"
 then
-	dbg_writeln("debug.lua initialized for "..jit.version)
+	dbg_writeln("debugger.lua loaded for "..jit.version)
+	luajit_load_readline_support()
 elseif
 	 _VERSION == "Lua 5.2" or
 	 _VERSION == "Lua 5.1"	 
 then
-	dbg_writeln("debug.lua initialized for ".._VERSION)
+	dbg_writeln("debugger.lua loaded for ".._VERSION)
 else
-	dbg_writeln("debug.lua not tested against ".._VERSION)
+	dbg_writeln("debugger.lua not tested against ".._VERSION)
 	dbg_writeln("Please send me feedback!")
 end
 
