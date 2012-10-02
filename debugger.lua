@@ -373,7 +373,7 @@ if jit and
 	jit.version == "LuaJIT 2.0.0-beta10"
 then
 	dbg_writeln("debugger.lua loaded for "..jit.version)
-	luajit_load_readline_support()
+	pcall(luajit_load_readline_support)
 elseif
 	 _VERSION == "Lua 5.2" or
 	 _VERSION == "Lua 5.1"	 
