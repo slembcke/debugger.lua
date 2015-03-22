@@ -151,7 +151,7 @@ local function local_bindings(offset, include_globals)
 		i = i + 1
 	until name == nil end
 	
-	-- Retrieve the varargs. (only works in Lua 5.2)
+	-- Retrieve the varargs. (works in Lua 5.2 and LuaJIT)
 	local varargs = {}
 	do local i = -1; repeat
 		local name, value = debug.getlocal(level, i)
@@ -258,7 +258,16 @@ local function cmd_trace()
 end
 
 local function cmd_locals()
-	for k, v in pairs(local_bindings(1, false)) do
+	local bindings = local_bindings(1, false)
+	
+	-- Get all the variable binding names and sort them
+	local keys = {}
+	for k, v in pairs(bindings) do table.insert(keys, k) end
+	table.sort(keys)
+	
+	for i, k in ipairs(keys) do
+		local v = bindings[k]
+		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
 		if v ~= dbg and k ~= "_ENV" and k ~= "(*temporary)" then
 			dbg_writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
@@ -358,14 +367,14 @@ dbg.pretty = pretty
 
 function dbg.error(err, level)
 	level = level or 1
-	dbg_writeln("Debugger stopped on error(%s)", pretty(err))
+	dbg_writeln(COLOR_RED.."Debugger stopped on error:"..COLOR_RESET.."(%s)", pretty(err))
 	dbg(false, level)
 	error(err, level)
 end
 
 function dbg.assert(condition, message)
 	if not condition then
-		dbg_writeln("Debugger stopped on assert(..., %s)", message)
+		dbg_writeln(COLOR_RED.."Debugger stopped on "..COLOR_RESET.."assert(..., %s)", message)
 		dbg(false, 1)
 	end
 	assert(condition, message)
@@ -373,7 +382,7 @@ end
 
 function dbg.call(f, l)
 	return (xpcall(f, function(err)
-		dbg_writeln("Debugger stopped on error: "..pretty(err))
+		dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, (l or 0) + 1)
 		return
 	end))
@@ -412,13 +421,13 @@ local function luajit_load_readline_support()
 end
 
 if jit then
-	dbg_writeln("debugger.lua loaded for "..jit.version)
+	dbg_writeln(COLOR_RED.."debugger.lua loaded for "..jit.version..COLOR_RESET)
 	pcall(luajit_load_readline_support)
 elseif
 	 _VERSION == "Lua 5.2" or
 	 _VERSION == "Lua 5.1"	 
 then
-	dbg_writeln("debugger.lua loaded for ".._VERSION)
+	dbg_writeln(COLOR_RED.."debugger.lua loaded for ".._VERSION..COLOR_RESET)
 else
 	dbg_writeln("debugger.lua not tested against ".._VERSION)
 	dbg_writeln("Please send me feedback!")
