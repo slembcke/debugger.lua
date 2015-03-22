@@ -27,9 +27,9 @@
 
 -- Use ANSI color codes in the prompt by default.
 -- You can disable it by making the strings empty.
-local COLOR_RED = "\x1b[31m"
-local COLOR_BLUE = "\x1b[34m"
-local COLOR_RESET = "\x1b[0m"
+local COLOR_RED = "\27[31m"
+local COLOR_BLUE = "\27[34m"
+local COLOR_RESET = "\27[0m"
 
 local function pretty(obj, non_recursive)
 	if type(obj) == "string" then
