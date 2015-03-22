@@ -90,7 +90,7 @@ end
 
 local function formatStackLocation(info)
 	local fname = (info.name or string.format("<%s:%d>", info.short_src, info.linedefined))
-	return string.format("%s:%d in function '%s'", info.short_src, info.currentline, fname)
+	return string.format(COLOR_BLUE.."%s"..COLOR_RED..":"..COLOR_BLUE.."%d"..COLOR_RESET.." in '%s'", info.short_src, info.currentline, fname)
 end
 
 local repl
@@ -206,7 +206,7 @@ local function cmd_print(expr)
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
-		dbg_writeln(expr..COLOR_RED.." => "..COLOR_RESET..result)
+		dbg_writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..result)
 	end
 	
 	return false
@@ -217,11 +217,11 @@ local function cmd_up()
 	
 	if info then
 		stack_offset = stack_offset + 1
-		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." Already at the top of the stack.")
+		dbg_writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
 	end
 	
+	dbg_writeln("Inspecting frame: "..formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
 	return false
 end
 
@@ -230,11 +230,11 @@ local function cmd_down()
 		stack_offset = stack_offset - 1
 		
 		local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
-		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." Already at the bottom of the stack.")
+		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
 	
+	dbg_writeln("Inspecting frame: "..formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
 	return false
 end
 
@@ -242,14 +242,26 @@ local function cmd_trace()
 	local location = formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
 	local message = string.format("Inspecting frame: %d - (%s)", offset, location)
-	dbg_writeln(debug.traceback(message, stack_offset + LOCAL_STACK_LEVEL))
+	local str = debug.traceback(message, LOCAL_STACK_LEVEL)
+	
+	-- Iterate the lines of the stack trace so we can highlight the current one.
+	local line_num = 0
+	while str and #str ~= 0 do
+		local line, rest = string.match(str, "([^\n]*)\n?(.*)")
+		str = rest
+		
+		local highlight = (line_num == stack_offset + 2)
+		dbg_writeln(highlight and COLOR_BLUE..">"..line..COLOR_RESET or line)
+		
+		line_num = line_num + 1
+	end
 	
 	return false
 end
 
 local function cmd_locals()
 	for k, v in pairs(local_bindings(1, false)) do
-		-- Don't print the Lua 5.2 __ENV local. It's pretty huge and useless to see.
+		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
 		if v ~= dbg and k ~= "_ENV" and k ~= "(*temporary)" then
 			dbg_writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
@@ -276,7 +288,7 @@ local function run_command(line)
 	
 	-- Execute the previous command or cache it
 	if line == "" then
-		if last_cmd then return unpack({run_command(last_cmd)}) else return false end
+		if last_cmd then line = last_cmd else return false end
 	else
 		last_cmd = line
 	end
@@ -294,15 +306,24 @@ local function run_command(line)
 		["h"] = cmd_help,
 	}
 	
+	local command = nil
+	local command_arg = nil
+	
 	for cmd, cmd_func in pairs(commands) do
 		local matches = {string.match(line, "^("..cmd..")$")}
 		if matches[1] then
-			return unpack({cmd_func(select(2, unpack(matches)))})
+			command = cmd_func
+			command_arg = select(2, unpack(matches))
+			break
 		end
 	end
 	
-	dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized", line)
-	return false
+	if command then
+		return unpack({command(command_arg)})
+	else
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized", line)
+		return false
+	end
 end
 
 repl = function()
