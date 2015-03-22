@@ -243,14 +243,13 @@ local function cmd_trace()
 	local str = debug.traceback(message, LOCAL_STACK_LEVEL)
 	
 	-- Iterate the lines of the stack trace so we can highlight the current one.
-	local line_num = 0
+	local line_num = -2
 	while str and #str ~= 0 do
 		local line, rest = string.match(str, "([^\n]*)\n?(.*)")
 		str = rest
 		
-		local highlight = (line_num == stack_offset + 2)
-		dbg_writeln(highlight and COLOR_BLUE..">"..line..COLOR_RESET or line)
-		
+		if line_num >= 0 then line = tostring(line_num)..line end
+		dbg_writeln((line_num == stack_offset) and COLOR_BLUE..line..COLOR_RESET or line)
 		line_num = line_num + 1
 	end
 	
