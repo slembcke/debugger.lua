@@ -25,6 +25,12 @@
 	* Do coroutines work as expected?
 ]]
 
+-- Use ANSI color codes in the prompt by default.
+-- You can disable it by making the strings empty.
+local COLOR_RED = "\x1b[31m"
+local COLOR_BLUE = "\x1b[34m"
+local COLOR_RESET = "\x1b[0m"
+
 local function pretty(obj, non_recursive)
 	if type(obj) == "string" then
 		return string.format("%q", obj)
@@ -88,6 +94,7 @@ local function formatStackLocation(info)
 end
 
 local repl
+local dbg
 
 local function hook_factory(repl_threshold)
 	return function(offset)
@@ -126,10 +133,6 @@ end
 local VARARG_SENTINEL = "(*varargs)"
 
 local function local_bindings(offset, include_globals)
-	--[[ TODO
-		Need to figure out how to get varargs with LuaJIT
-	]]
-	
 	local level = stack_offset + offset + LOCAL_STACK_LEVEL
 	local func = debug.getinfo(level).func
 	local bindings = {}
@@ -188,22 +191,22 @@ local function cmd_print(expr)
 	local env = local_bindings(1, true)
 	local chunk = compile_chunk(expr, env)
 	if chunk == nil then
-		dbg_writeln("Error: Could not evaluate expression.")
+		dbg_writeln(COLOR_RED.."Error: Could not evaluate expression."..COLOR_RESET)
 		return false
 	end
 	
 	local count, results = super_pack(pcall(chunk, unpack(env[VARARG_SENTINEL])))
 	if not results[1] then
-		dbg_writeln("Error: %s", results[2])
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
 	elseif count == 1 then
-		dbg_writeln("Error: No expression to execute")
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." No expression to execute")
 	else
 		local result = ""
 		for i=2, count do
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
-		dbg_writeln(expr.." => "..result)
+		dbg_writeln(expr..COLOR_RED.." => "..COLOR_RESET..result)
 	end
 	
 	return false
@@ -216,7 +219,7 @@ local function cmd_up()
 		stack_offset = stack_offset + 1
 		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
-		dbg_writeln("Error: Already at the top of the stack.")
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." Already at the top of the stack.")
 	end
 	
 	return false
@@ -229,7 +232,7 @@ local function cmd_down()
 		local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 		dbg_writeln("Inspecting frame: "..formatStackLocation(info))
 	else
-		dbg_writeln("Error: Already at the bottom of the stack.")
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." Already at the bottom of the stack.")
 	end
 	
 	return false
@@ -247,8 +250,8 @@ end
 local function cmd_locals()
 	for k, v in pairs(local_bindings(1, false)) do
 		-- Don't print the Lua 5.2 __ENV local. It's pretty huge and useless to see.
-		if k ~= "_ENV" then
-			dbg_writeln("\t%s => %s", k, pretty(v))
+		if v ~= dbg and k ~= "_ENV" and k ~= "(*temporary)" then
+			dbg_writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
 	
@@ -298,7 +301,7 @@ local function run_command(line)
 		end
 	end
 	
-	dbg_writeln("Error: command '%s' not recognized", line)
+	dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized", line)
 	return false
 end
 
@@ -306,18 +309,18 @@ repl = function()
 	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
 	
 	repeat
-		local success, done, hook = pcall(run_command, dbg_read("debugger.lua> "))
+		local success, done, hook = pcall(run_command, dbg_read(COLOR_RED.."debugger.lua> "..COLOR_RESET))
 		if success then
 			debug.sethook(hook and hook(0), "crl")
 		else
-			local message = string.format("INTERNAL DEBUGGER.LUA ERROR. ABORTING\n: %s", done)
+			local message = string.format(COLOR_RED.."INTERNAL DEBUGGER.LUA ERROR. ABORTING\n:"..COLOR_RESET.." %s", done)
 			dbg_writeln(message)
 			error(message)
 		end
 	until done
 end
 
-local dbg = setmetatable({}, {
+dbg = setmetatable({}, {
 	__call = function(self, condition, offset)
 		if condition then return end
 		
@@ -389,9 +392,7 @@ local function luajit_load_readline_support()
 	dbg_writeln("Readline support loaded.")
 end
 
-if jit and
-	jit.version == "LuaJIT 2.0.0-beta10"
-then
+if jit then
 	dbg_writeln("debugger.lua loaded for "..jit.version)
 	pcall(luajit_load_readline_support)
 elseif
