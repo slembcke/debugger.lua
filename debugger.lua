@@ -198,11 +198,9 @@ local function cmd_print(expr)
 	local count, results = super_pack(pcall(chunk, unpack(env[VARARG_SENTINEL])))
 	if not results[1] then
 		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
-	elseif count == 1 then
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." No expression to execute")
 	else
-		local result = ""
-		for i=2, count do
+		local result = (count == 1 and COLOR_BLUE.."<no result>"..COLOR_RESET or "")
+		for i = 2, count do
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
