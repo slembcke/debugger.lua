@@ -1,5 +1,5 @@
 --[[
-	Copyright (c) 2013 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2015 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ local COLOR_RESET = "\x1b[0m"
 
 local function pretty(obj, non_recursive)
 	if type(obj) == "string" then
+		-- Dump the string so that escape sequences are printed.
 		return string.format("%q", obj)
 	elseif type(obj) == "table" and not non_recursive then
 		local str = "{"
@@ -63,6 +64,7 @@ h(elp) - print this message
 ]]
 
 -- The stack level that cmd_* functions use to access locals or info
+-- The structure of the code very carefully ensures this.
 local LOCAL_STACK_LEVEL = 6
 
 -- Extra stack frames to chop off.
@@ -73,24 +75,24 @@ local stack_top = 0
 -- Changed using the up/down commands
 local stack_offset = 0
 
--- Override if you don't want to use stdin
 -- Override if you don't want to use stdout.
 local function dbg_write(str, ...)
 	io.write(string.format(str, ...))
+end
+
+-- Override if you don't want to use stdin
+local function dbg_read(prompt)
+	dbg_write(prompt)
+	return io.read()
 end
 
 local function dbg_writeln(str, ...)
 	dbg_write((str or "").."\n", ...)
 end
 
-local function dbg_read(prompt)
-	dbg_write(prompt)
-	return io.read()
-end
-
-local function formatStackLocation(info)
+local function format_stack_frame_info(info)
 	local fname = (info.name or string.format("<%s:%d>", info.short_src, info.linedefined))
-	return string.format(COLOR_BLUE.."%s"..COLOR_RED..":"..COLOR_BLUE.."%d"..COLOR_RESET.." in '%s'", info.short_src, info.currentline, fname)
+	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", info.short_src, info.currentline, fname)
 end
 
 local repl
@@ -130,8 +132,8 @@ local function table_merge(t1, t2)
 	return tbl
 end
 
-local VARARG_SENTINEL = "(*varargs)"
-
+-- Create a table of all the locally accessible variables.
+-- Globals are not included when running the locals command, but are when running the print command.
 local function local_bindings(offset, include_globals)
 	local level = stack_offset + offset + LOCAL_STACK_LEVEL
 	local func = debug.getinfo(level).func
@@ -158,7 +160,7 @@ local function local_bindings(offset, include_globals)
 		table.insert(varargs, value)
 		i = i - 1
 	until name == nil end
-	bindings[VARARG_SENTINEL] = varargs
+	if #varargs ~= 0 then bindings["..."] = varargs end
 	
 	if include_globals then
 		-- Merge the local bindings over the top of the environment table.
@@ -172,6 +174,7 @@ local function local_bindings(offset, include_globals)
 	end
 end
 
+-- Compile an expression with the given variable bindings.
 local function compile_chunk(expr, env)
 	if _VERSION <= "Lua 5.1" then
 		local chunk = loadstring("return "..expr, "<debugger repl>")
@@ -183,10 +186,6 @@ local function compile_chunk(expr, env)
 	end
 end
 
-local function super_pack(...)
-	return select("#", ...), {...}
-end
-
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
 	local chunk = compile_chunk(expr, env)
@@ -195,12 +194,17 @@ local function cmd_print(expr)
 		return false
 	end
 	
-	local count, results = super_pack(pcall(chunk, unpack(env[VARARG_SENTINEL])))
+	-- Call the chunk and collect the results.
+	local results = {pcall(chunk, unpack(env["..."] or {}))}
+	
+	-- The first result is the pcall error.
 	if not results[1] then
 		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
+	elseif #results == 1 then
+		dbg_writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_BLUE.."<no result>"..COLOR_RESET)
 	else
-		local result = (count == 1 and COLOR_BLUE.."<no result>"..COLOR_RESET or "")
-		for i = 2, count do
+		local result = ""
+		for i = 2, #results do
 			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
@@ -219,7 +223,7 @@ local function cmd_up()
 		dbg_writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
 	end
 	
-	dbg_writeln("Inspecting frame: "..formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
+	dbg_writeln("Inspecting frame: "..format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
 	return false
 end
 
@@ -232,12 +236,12 @@ local function cmd_down()
 		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
 	
-	dbg_writeln("Inspecting frame: "..formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
+	dbg_writeln("Inspecting frame: "..format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)))
 	return false
 end
 
 local function cmd_trace()
-	local location = formatStackLocation(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
+	local location = format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
 	local message = string.format("Inspecting frame: %d - (%s)", offset, location)
 	local str = debug.traceback(message, LOCAL_STACK_LEVEL)
@@ -276,29 +280,9 @@ local function cmd_locals()
 	return false
 end
 
-local function cmd_help()
-	dbg_writeln(help_message)
-	return false
-end
-
 local last_cmd = false
 
--- Run a command line
--- Returns true if the REPL should exit and the hook function factory
-local function run_command(line)
-	-- Continue without caching the command if you hit control-d.
-	if line == nil then
-		dbg_writeln()
-		return true
-	end
-	
-	-- Execute the previous command or cache it
-	if line == "" then
-		if last_cmd then line = last_cmd else return false end
-	else
-		last_cmd = line
-	end
-	
+local function match_command(line)
 	local commands = {
 		["c"] = function() return true end,
 		["s"] = function() return true, hook_step end,
@@ -309,21 +293,34 @@ local function run_command(line)
 		["d"] = cmd_down,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
-		["h"] = cmd_help,
+		["h"] = function() dbg_writeln(help_message); return false end,
 	}
-	
-	local command = nil
-	local command_arg = nil
 	
 	for cmd, cmd_func in pairs(commands) do
 		local matches = {string.match(line, "^("..cmd..")$")}
 		if matches[1] then
-			command = cmd_func
-			command_arg = select(2, unpack(matches))
-			break
+			return cmd_func, select(2, unpack(matches))
 		end
 	end
+end
+
+-- Run a command line
+-- Returns true if the REPL should exit and the hook function factory
+local function run_command(line)
+	-- Continue without caching the command if you hit control-d.
+	if line == nil then
+		dbg_writeln()
+		return true
+	end
 	
+	-- Re-execute the last command if you press return.
+	if line == "" then
+		if last_cmd then line = last_cmd else return false end
+	else
+		last_cmd = line
+	end
+	
+	command, command_arg = match_command(line)
 	if command then
 		return unpack({command(command_arg)})
 	else
@@ -333,7 +330,7 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg_writeln(formatStackLocation(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
+	dbg_writeln(format_stack_frame_info(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg_read(COLOR_RED.."debugger.lua> "..COLOR_RESET))
@@ -347,6 +344,7 @@ repl = function()
 	until done
 end
 
+-- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
 	__call = function(self, condition, offset)
 		if condition then return end
@@ -360,29 +358,37 @@ dbg = setmetatable({}, {
 	end,
 })
 
+-- Expose the debugger's printing functions.
 dbg.write = dbg_write
 dbg.writeln = dbg_writeln
 dbg.pretty = pretty
 
+-- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
 	dbg_writeln(COLOR_RED.."Debugger stopped on error:"..COLOR_RESET.."(%s)", pretty(err))
 	dbg(false, level)
+	
 	error(err, level)
 end
 
+-- Works like assert(), but invokes the debugger on a failure.
 function dbg.assert(condition, message)
 	if not condition then
 		dbg_writeln(COLOR_RED.."Debugger stopped on "..COLOR_RESET.."assert(..., %s)", message)
 		dbg(false, 1)
 	end
+	
 	assert(condition, message)
 end
 
+-- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, l)
 	return (xpcall(f, function(err)
 		dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, (l or 0) + 1)
+		
+		-- Prevent a tail call to dbg().
 		return
 	end))
 end
@@ -419,13 +425,12 @@ local function luajit_load_readline_support()
 	dbg_writeln("Readline support loaded.")
 end
 
+-- Detect Lua version.
 if jit then
+	-- LuaJIT
 	dbg_writeln(COLOR_RED.."debugger.lua loaded for "..jit.version..COLOR_RESET)
 	pcall(luajit_load_readline_support)
-elseif
-	 _VERSION == "Lua 5.2" or
-	 _VERSION == "Lua 5.1"	 
-then
+elseif _VERSION == "Lua 5.2" or _VERSION == "Lua 5.1" then
 	dbg_writeln(COLOR_RED.."debugger.lua loaded for ".._VERSION..COLOR_RESET)
 else
 	dbg_writeln("debugger.lua not tested against ".._VERSION)
