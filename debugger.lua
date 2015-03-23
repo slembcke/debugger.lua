@@ -27,9 +27,9 @@
 
 -- Use ANSI color codes in the prompt by default.
 -- You can disable it by making the strings empty.
-local COLOR_RED = "\27[31m"
-local COLOR_BLUE = "\27[34m"
-local COLOR_RESET = "\27[0m"
+local COLOR_RED = "\x1b[31m"
+local COLOR_BLUE = "\x1b[34m"
+local COLOR_RESET = "\x1b[0m"
 
 local function pretty(obj, non_recursive)
 	if type(obj) == "string" then
@@ -422,18 +422,18 @@ local function luajit_load_readline_support()
 		end
 	end
 	
-	dbg_writeln("Readline support loaded.")
+	dbg_writeln(COLOR_RED.."debugger.lua: Readline support enabled.")
 end
 
 -- Detect Lua version.
 if jit then
 	-- LuaJIT
-	dbg_writeln(COLOR_RED.."debugger.lua loaded for "..jit.version..COLOR_RESET)
+	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
 	pcall(luajit_load_readline_support)
 elseif _VERSION == "Lua 5.2" or _VERSION == "Lua 5.1" then
-	dbg_writeln(COLOR_RED.."debugger.lua loaded for ".._VERSION..COLOR_RESET)
+	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for ".._VERSION..COLOR_RESET)
 else
-	dbg_writeln("debugger.lua not tested against ".._VERSION)
+	dbg_writeln("debugger.lua: Not tested against ".._VERSION)
 	dbg_writeln("Please send me feedback!")
 end
 
