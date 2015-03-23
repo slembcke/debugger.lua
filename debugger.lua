@@ -272,7 +272,7 @@ local function cmd_locals()
 		local v = bindings[k]
 		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
-		if v ~= dbg and k ~= "_ENV" and k ~= "(*temporary)" then
+		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
 			dbg_writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
