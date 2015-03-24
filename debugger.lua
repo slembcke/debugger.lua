@@ -244,7 +244,7 @@ local function cmd_trace()
 	local location = format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
 	local message = string.format("Inspecting frame: %d - (%s)", offset, location)
-	local str = debug.traceback(message, LOCAL_STACK_LEVEL)
+	local str = debug.traceback(message, stack_top + LOCAL_STACK_LEVEL)
 	
 	-- Iterate the lines of the stack trace so we can highlight the current one.
 	local line_num = -2
@@ -253,7 +253,7 @@ local function cmd_trace()
 		str = rest
 		
 		if line_num >= 0 then line = tostring(line_num)..line end
-		dbg_writeln((line_num == stack_offset) and COLOR_BLUE..line..COLOR_RESET or line)
+		dbg_writeln((line_num + stack_top == stack_offset) and COLOR_BLUE..line..COLOR_RESET or line)
 		line_num = line_num + 1
 	end
 	
