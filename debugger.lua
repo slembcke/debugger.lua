@@ -100,7 +100,7 @@ local dbg
 
 local function hook_factory(repl_threshold)
 	return function(offset)
-		return function(event, line)
+		return function(event, _)
 			local info = debug.getinfo(2)
 			
 			if event == "call" and info.linedefined >= 0 then
@@ -230,8 +230,6 @@ end
 local function cmd_down()
 	if stack_offset > stack_top then
 		stack_offset = stack_offset - 1
-		
-		local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 	else
 		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
@@ -265,10 +263,10 @@ local function cmd_locals()
 	
 	-- Get all the variable binding names and sort them
 	local keys = {}
-	for k, v in pairs(bindings) do table.insert(keys, k) end
+	for k, _ in pairs(bindings) do table.insert(keys, k) end
 	table.sort(keys)
 	
-	for i, k in ipairs(keys) do
+	for _, k in ipairs(keys) do
 		local v = bindings[k]
 		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
@@ -320,7 +318,7 @@ local function run_command(line)
 		last_cmd = line
 	end
 	
-	command, command_arg = match_command(line)
+	local command, command_arg = match_command(line)
 	if command then
 		return unpack({command(command_arg)})
 	else
