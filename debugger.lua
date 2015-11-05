@@ -198,6 +198,9 @@ local function compile_chunk(expr, env)
 	end
 end
 
+-- Wee version differences
+local unpack = unpack or table.unpack
+
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
 	local chunk = compile_chunk(expr, env)
