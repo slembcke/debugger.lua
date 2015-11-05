@@ -210,7 +210,7 @@ local function cmd_print(expr)
 	end
 	
 	-- Call the chunk and collect the results.
-	local results = {pcall(chunk, unpack(env["..."] or {}))}
+	local results = {pcall(chunk, unpack(rawget(env, "...") or {}))}
 	
 	-- The first result is the pcall error.
 	if not results[1] then
