@@ -178,7 +178,7 @@ local function local_bindings(offset, include_globals)
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
 		
 		-- Finally, merge the tables and add a lookup for globals.
-		return setmetatable(table_merge(env, bindings), {__index = _G})
+		return setmetatable(table_merge(env or {}, bindings), {__index = _G})
 	else
 		return bindings
 	end
