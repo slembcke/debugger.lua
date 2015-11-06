@@ -407,6 +407,14 @@ function dbg.call(f, l)
 	end))
 end
 
+-- Error message handler that can be used with lua_pcall().
+function dbg.msgh(...)
+	print(...)
+	dbg(false, 1)
+	
+	return ...
+end
+
 -- Detect Lua version.
 if jit then -- LuaJIT
 	dbg.writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
