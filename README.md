@@ -9,7 +9,7 @@ Features
 -
 
 - Simple to "install". Simply copy debugger.lua into your project then load it using <code>local dbg = require()</code>.
-- Conditional assert-style breakpoints.
+- Conditional, assert-style breakpoints.
 - Colored output and GNU readline support where applicable.
 - Easy to set it up to break on <code>assert()</code> or <code>error()</code>
 - <code>dbg.call()</code> works similar to <code>xpcall()</code> but starts the debugger when an error occurs.
@@ -103,4 +103,4 @@ Future Plans:
 
 debugger.lua basically does everything I want now, although I have some ideas for enhancements.
 
-- Custom formatters: The built in pretty-printing works fine for most things. It would be nice to be able to register custom formatting functions though.
+- C API: Make the debugger easily embedable from C as a second option. I have a solution I'm mostly happy with in my current project. It exposes a <code>dbg_setup()</code> function to preload the debugger, and a <code>dbg_call()</code> function that works like <code>lua_pcall()</code>, but starts the debugger automaticall when an error occurs. Just needs some cleaning up.
