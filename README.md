@@ -84,7 +84,7 @@ Now you can go nuts adding all sorts of bugs in your Lua code!
 
 	function MyBuggyFunction()
 		-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
-		local enterTheDebuggerREPL = require("util.debugger");
+		local enterTheDebuggerREPL = require("debugger");
 		enterTheDebuggerREPL()
 		
 		-- or if you defined a global name, you can use that instead. (highly recommended)
