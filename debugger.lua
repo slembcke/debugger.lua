@@ -335,6 +335,7 @@ local function run_command(line)
 	
 	local command, command_arg = match_command(line)
 	if command then
+		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	else
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized", line)
