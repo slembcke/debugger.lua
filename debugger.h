@@ -18,8 +18,44 @@
 	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 	SOFTWARE.
-*/
 
+
+	NOTE: MAKE SURE TO RUN 'lua debugger.c.lua' TO GENERATE THE .C FILE!
+	
+	
+	EXAMPLE:
+	
+	int main(int argc, char **argv){
+		lua_State *lua = luaL_newstate();
+		luaL_openlibs(lua);
+		
+		// Register the debuggr module as "util.debugger" and store it in the global variable "dbg".
+		dbg_setup(lua, "debugger", "dbg", NULL, NULL);
+		
+		// Load some lua code and prepare to call the MyBuggyFunction() defined below...
+		
+		// dbg_pcall() is called exactly like lua_pcall().
+		// Although note that passing a custom message handler disables the debugger.
+		if(dbg_pcall(lua, nargs, nresults, 0)){
+			fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
+		}
+	}
+	
+	function MyBuggyFunction()
+		-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
+		local enterTheDebuggerREPL = require("debugger");
+		enterTheDebuggerREPL()
+		
+		-- or if you defined a global name, you can use that instead. (highly recommended)
+		dbg()
+		
+		-- When lua is invoked from dbg_pcall() using the default message handler (0),
+		-- errors will cause the debugger to attach automatically! Nice!
+		error()
+		assert(false)
+		(nil)[0]
+	end
+*/
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,44 +78,6 @@ void dbg_setup_default(lua_State *lua);
 
 // Drop in replacement for lua_pcall() that attaches the debugger on an error if 'msgh' is 0.
 int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh);
-
-/* EXAMPLE
-
-Setting up the debugger is painless from C:
-
-int main(int argc, char **argv){
-	lua_State *lua = luaL_newstate();
-	luaL_openlibs(lua);
-	
-	// Register the debuggr module as "util.debugger" and store it in the global variable "dbg".
-	dbg_setup(lua, "debugger", "dbg", NULL, NULL);
-	
-	// Load some lua code and prepare to call the MyBuggyFunction() defined below...
-	
-	// dbg_pcall() is called exactly like lua_pcall().
-	// Although note that passing a custom message handler disables the debugger.
-	if(dbg_pcall(lua, nargs, nresults, 0)){
-		fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
-	}
-}
-
-function MyBuggyFunction()
-	-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
-	local enterTheDebuggerREPL = require("util.debugger");
-	enterTheDebuggerREPL()
-	
-	-- or if you defined a global name, you can use that instead. (highly recommended)
-	dbg()
-	
-	-- When lua is invoked from dbg_pcall() using the default message handler (0),
-	-- errors will cause the debugger to attach automatically! Nice!
-	error()
-	assert(false)
-	(nil)[0]
-end
-
-
-*/
 
 #ifdef __cplusplus
 }

@@ -114,4 +114,4 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int _msgh){
 }
 ]]
 
-print(c_src)
+io.open("debugger.c", "w"):write(c_src)
