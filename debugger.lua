@@ -410,7 +410,7 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	print(...)
+	dbg.write(...)
 	dbg(false, 1)
 	
 	return ...
