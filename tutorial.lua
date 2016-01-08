@@ -10,12 +10,15 @@ print[[
 print[[
 	You are now in the debugger! (Woo! \o/).
 	debugger.lua doesn't support traditional breakpoints.
-	Instead you call the dbg() object to set a breakpoint.
+	Instead you call the dbg() object to invoke the debugger.
+	Real break points would be better, but this
+	keeps debugger.lua simple and very fast.
 	
 	Notice how it prints out your current file and
 	line as well as which function you are in.
 	Keep a close watch on this as you follow along.
-	It should be at line XXX, a line after the dbg() call.
+	It should be stopped a line after the dbg() call.
+	(Line 80 probably?)
 	
 	Sometimes functions don't have global names.
 	It might print the method name, local variable
@@ -65,9 +68,8 @@ local function func2()
 	
 	print()
 	print[[
-	The 'n' command also steps to the next line in the source file.
-	Unlike the 's' command, it steps over function
-	calls, not into them.
+	The 'n' command steps to the next line in the source file.
+	Unlike the 's' command, it steps over function calls, and not into them.
 	
 	Now try the 'c' command to continue on to the next breakpoint.
 	(c =  Continue execution)
@@ -102,7 +104,7 @@ local function func3()
 	Let's assume you want to see them.
 	
 	Try the 'l' command to list all the locally available variables.
-	(l = Local variables)
+	(l = List local variables)
 	
 	Type 'c' to continue on to the next section.
 ]]
@@ -123,39 +125,34 @@ function func4(a, b, ...)
 	
 	print[[
 	Some things to notice about the local variables list.
-	'(*vargargs)'
-		This is the list of varargs passed to the function.
-		(only works with Lua 5.2)
-	'(*temporary)'
-		Other values like this may (or may not) appear as well.
-		They are temporary values used by the lua interpreter.
-		They may be stripped out in the future.
+	'...'
+	  This is the list of varargs passed to the function.
+	  (This only works with Lua 5.2+ or LuaJIT 2.0+)
+	  Note: varargs are not an array, but debugger.lua stores them that way.
 	'my_upvalue1'
-		This is a local variable defined outside of but
-		referenced by the function. Upvalues show up
-		*only* when you reference them within your
-		function. 'my_upvalue2' isn't in the list
-		because func4() doesn't reference it.
+	  This is a local variable defined outside of, but
+	  referenced by the function. Upvalues show up
+	  *only* when you reference them within your
+	  function. 'my_upvalue2' isn't in the list
+	  because func4() doesn't reference it.
 	
-	Listing the locals is nice, but sometimes it's just noise.
+	Listing the locals is nice, but sometimes there are too many to see at once.
 	Often times it's useful to print just a single variable,
 	evaluate an expression, or call a function to see what it returns.
-	
 	For that you use the 'p' command.
+	(p = Print or evaluate an expression)
+	
 	Try these commands:
 	p my_upvalue1
 	p 1 + 1
 	p print("foo")
 	p math.cos(0)
 	
-	You can also interact with varargs,
-	but it depends on your Lua version.
-	In Lua 5.2 you can do this:
+	You can also interact with varargs. (Except on Lua 5.1)
+	For example:
+	p ...
 	p select(2, ...)
-	
-	In Lua 5.1 or LuaJIT you need to copy
-	the varargs into a table and unpack them:
-	p select(2, unpack(varargs_copy))
+	p {...}
 	
 	Type 'c' to continue to the next section.
 ]]
@@ -184,8 +181,8 @@ local function func5()
 	or func7() to see how you got where you were?
 	
 	For that you use the 'u' and 'd' commands.
-	(u = move Up a stack frame)
-	(d = move Down a stack frame)
+	(u = Move up a stack frame)
+	(d = Move down a stack frame)
 	
 	Try the 'u' and 'd' commands a few times.
 	Print out the value of my_var using the 'p' command each time.
