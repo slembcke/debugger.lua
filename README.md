@@ -132,6 +132,7 @@ Known Issues:
 - Coroutine support has not been tested extensively yet, and Lua vs. LuaJIT handle them differently anyway. -_-
 
 License:
+-
 
 	Copyright (c) 2016 Scott Lembcke and Howling Moon Software
 	
