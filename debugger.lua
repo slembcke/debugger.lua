@@ -419,7 +419,7 @@ end
 -- Detect Lua version.
 if jit then -- LuaJIT
 	dbg.writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
-elseif _VERSION == "Lua 5.2" or _VERSION == "Lua 5.1" then
+elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
 	dbg.writeln(COLOR_RED.."debugger.lua: Loaded for ".._VERSION..COLOR_RESET)
 else
 	dbg.writeln(COLOR_RED.."debugger.lua: Not tested against ".._VERSION..COLOR_RESET)
