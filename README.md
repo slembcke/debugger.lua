@@ -69,7 +69,7 @@ debugger.lua can be easily integrated into an embedded project by including a si
 		lua_State *lua = luaL_newstate();
 		luaL_openlibs(lua);
 		
-		// Register the debuggr module as "util.debugger" and store it in the global variable "dbg".
+		// Register the debuggr module as "debugger" and store it in the global variable "dbg".
 		dbg_setup(lua, "debugger", "dbg", NULL, NULL);
 		
 		// Load some lua code and prepare to call the MyBuggyFunction() defined below...
