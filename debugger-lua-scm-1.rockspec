@@ -2,7 +2,7 @@ package = "debugger-lua"
 version = "scm-1"
 
 source = {
-   url = "https://github.com/slembcke/debugger.lua"
+   url = "https://raw.githubusercontent.com/slembcke/debugger.lua/master/debugger.lua"
 }
 
 description = {
