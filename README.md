@@ -8,18 +8,18 @@ Have you ever been working on an embedded Lua project and found yourself in need
 Features
 -
 
-- MIT license.
-- Simple to "install". Can be integrated as a single .lua _or_ .c file.
-- Conditional, assert-style breakpoints.
-- Colored output and GNU readline support where applicable.
-- Easy to set it up to break on <code>assert()</code> or <code>error()</code>
-- <code>dbg.call()</code> works similar to <code>xpcall()</code> but starts the debugger when an error occurs.
-- <code>dbg_call()</code> works as a drop-in replacement for <code>lua_pcall()</code> when using the C API.
+- Trivial to "install". Can be integrated as a single .lua _or_ .c file.
 - The regular assortment of commands you'd expect from a debugger: continue, step, next, finish, print/eval expression, move up/down the stack, backtrace, print locals, inline help.
 - Evaluate expressions and call functions interactively in the debugger with pretty printed output. Inspect locals, upvalues and globals. Even works with varargs <code>...</code> (Lua 5.2+ and LuaJIT only).
 - Pretty printed output so you get <code>{1 = 3, "a" = 5}</code> instead of <code>table: 0x10010cfa0</code>
 - Speed. The debugger hooks are only set when running the step/next/finish commands and shouldn't otherwise affect your program's performance.
+- Conditional, assert-style breakpoints.
+- Colored output and GNU readline support when possible.
+- Easy to set it up to break on Lua's <code>assert()</code> or <code>error()</code> functions.
+- <code>dbg.call()</code> works similar to <code>xpcall()</code> but starts the debugger when an error occurs.
+- From the C API, <code>dbg_call()</code> works as a drop-in replacement for <code>lua_pcall()</code>.
 - IO can easily be remapped to a socket or window by overwriting the <code>dbg.write()</code> and <code>dbg.read()</code> functions.
+- Permissive MIT license.
 
 How to Use it:
 -
@@ -55,7 +55,7 @@ First of all, there is nothing to install. Just drop debugger.lua into your proj
 	end)
 	
 	-- Lastly, you can override the standard Lua error() and assert() functions if you want:
-	-- These variations will enter the debugger instead of throwing an error.
+	-- These variations will enter the debugger instead of aborting the program.
 	-- dbg.call() is generally more useful though.
 	local assert = dbg.assert
 	local error = dbg.error
@@ -63,25 +63,28 @@ First of all, there is nothing to install. Just drop debugger.lua into your proj
 Super Simple C API:
 -
 
-debugger.lua can be easily integrated into an embedded project by including a single .c file. First make sure to run the `lua debugger.c.lua` template to actually generate the C code. (It just inserts the debugger.lua source into a C string)
+debugger.lua can be easily integrated into an embedded project by including a single .c (and .h) file. First, you'll need to run `lua debugger.c.lua`. This generates debugger.c by inserting the lua code into a template .c file.
 
 	int main(int argc, char **argv){
 		lua_State *lua = luaL_newstate();
 		luaL_openlibs(lua);
 		
-		// Register the debuggr module as "debugger" and store it in the global variable "dbg".
+		// The 2nd parameter is the module name. (Ex: `require 'debugger'`)
+		// The 3rd parameter is the name of a global variable to bind it to, or `NULL` if you don't want one.
+		// The last two are `lua_CFunction`s for overriding the I/O functions.
+		// A `NULL` I/O function  means to use standard input or output respectively.
 		dbg_setup(lua, "debugger", "dbg", NULL, NULL);
 		
 		// Load some lua code and prepare to call the MyBuggyFunction() defined below...
 		
 		// dbg_pcall() is called exactly like lua_pcall().
-		// Although note that passing a custom message handler disables the debugger.
+		// Although note that using a custom message handler disables the debugger.
 		if(dbg_pcall(lua, nargs, nresults, 0)){
 			fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
 		}
 	}
 
-Now you can go nuts adding all sorts of bugs in your Lua code!
+Now you can go nuts adding all sorts of bugs in your Lua code! When an error occurs inside `dbg_call()` it will automatically load, and connect the debugger on the line of the crash.
 
 	function MyBuggyFunction()
 		-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
