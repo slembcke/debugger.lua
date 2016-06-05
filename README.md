@@ -69,10 +69,10 @@ debugger.lua can be easily integrated into an embedded project by including a si
 		lua_State *lua = luaL_newstate();
 		luaL_openlibs(lua);
 		
-		// The 2nd parameter is the module name. (Ex: `require 'debugger'`)
-		// The 3rd parameter is the name of a global variable to bind it to, or `NULL` if you don't want one.
-		// The last two are `lua_CFunction`s for overriding the I/O functions.
-		// A `NULL` I/O function  means to use standard input or output respectively.
+		// The 2nd parameter is the module name. (Ex: require("debugger") )
+		// The 3rd parameter is the name of a global variable to bind it to, or NULL if you don't want one.
+		// The last two are lua_CFunctions for overriding the I/O functions.
+		// A NULL I/O function  means to use standard input or output respectively.
 		dbg_setup(lua, "debugger", "dbg", NULL, NULL);
 		
 		// Load some lua code and prepare to call the MyBuggyFunction() defined below...
