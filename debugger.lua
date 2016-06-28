@@ -93,7 +93,11 @@ end
 
 -- Default dbg.write function
 local function dbg_write(str, ...)
-	io.write(string.format(str, ...))
+	if select("#", ...) == 0 then
+		io.write(str or "<NULL>")
+	else
+		io.write(string.format(str, ...))
+	end
 end
 
 -- Default dbg.writeln function.
