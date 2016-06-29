@@ -1,3 +1,5 @@
+#! /usr/bin/env lua
+
 --[[
 	Copyright (c) 2016 Scott Lembcke and Howling Moon Software
 	
@@ -478,5 +480,24 @@ pcall(function()
 		dbg.writeln(COLOR_RED.."debugger.lua: Readline support enabled."..COLOR_RESET)
 	end
 end)
+
+-- Interpreter mode.
+local args = {...}
+local filename = table.remove(args, 1)
+
+if filename and filename ~= "debugger" then
+	-- Set dbg as global.
+	_G.dbg = dbg
+	
+	-- Execute.
+	local script, err = loadfile(filename)
+	dbg.call(function()
+		if script then
+			script(args)
+		else
+			print(err)
+		end
+	end)
+end
 
 return dbg
