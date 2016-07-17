@@ -348,7 +348,7 @@ local function match_command(line)
 		["s"] = function() return true, hook_step end,
 		["n"] = function() return true, hook_next end,
 		["f"] = function() return true, hook_finish end,
-		["p%s*(.*)"] = cmd_print,
+		["p%s+(.*)"] = cmd_print,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
 		["t"] = cmd_trace,
@@ -356,7 +356,7 @@ local function match_command(line)
 		["h"] = function() dbg.writeln(help_message); return false end,
 		["S"] = function() dbg.enabled = false; return true end,
 		["q"] = function() os.exit() end,
-		["o%s*(%S*)%s*(%S*)"] = cmd_options
+		["o%s+(%S*)%s*(%S*)"] = cmd_options
 	}
 
 	for cmd, cmd_func in pairs(commands) do
