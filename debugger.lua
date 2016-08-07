@@ -186,19 +186,26 @@ local function local_bindings(offset, include_globals)
 	else
 		return bindings
 	end
-end
+end --189
 
 -- Compile an expression with the given variable bindings.
-local function compile_chunk(expr, env)
+local function compile_chunk(block, env)
 	local source = "debugger.lua REPL"
+	local chunk = nil
 	
 	if _VERSION <= "Lua 5.1" then
-		local chunk = loadstring("return "..expr, source)
+		chunk = loadstring(block, source)
 		if chunk then setfenv(chunk, env) end
-		return chunk
 	else
 		-- The Lua 5.2 way is a bit cleaner
-		return load("return "..expr, source, "t", env)
+		chunk = load(block, source, "t", env)
+	end
+	
+	if chunk then
+		return chunk
+	else
+		dbg.writeln(COLOR_RED.."Error: Could not compile block:\n"..COLOR_RESET..block)
+		return nil
 	end
 end
 
@@ -207,11 +214,8 @@ local unpack = unpack or table.unpack
 
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
-	local chunk = compile_chunk(expr, env)
-	if chunk == nil then
-		dbg.writeln(COLOR_RED.."Error: Could not evaluate expression."..COLOR_RESET)
-		return false
-	end
+	local chunk = compile_chunk("return ("..expr..")", env)
+	if chunk == nil then return false end
 	
 	-- Call the chunk and collect the results.
 	local results = {pcall(chunk, unpack(rawget(env, "...") or {}))}
@@ -231,6 +235,18 @@ local function cmd_print(expr)
 	end
 	
 	return false
+end
+
+local function cmd_eval(stat)
+	local env = local_bindings(1, true)
+	local chunk = compile_chunk(stat, env)
+	if chunk == nil then return false end
+	
+	-- Call the chunk and collect the results.
+	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
+	if not success then
+		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
+	end
 end
 
 local function cmd_up()
@@ -306,6 +322,7 @@ local function match_command(line)
 		["n"] = function() return true, hook_next end,
 		["f"] = function() return true, hook_finish end,
 		["p%s?(.*)"] = cmd_print,
+		["e%s?(.*)"] = cmd_eval,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
 		["t"] = cmd_trace,
