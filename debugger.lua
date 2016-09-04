@@ -317,7 +317,7 @@ local function cmd_locals(extended)
 end
 
 local function cmd_options(name, val)
-	val = val or ""
+	val = val and tostring(val) or ""
 	local function yesno(v)
 		if v:match 'off' or v:match 'no' or v:match 'false' then
 			return false
@@ -431,6 +431,7 @@ dbg.write = dbg_write
 dbg.writeln = dbg_writeln
 dbg.pretty = pretty
 
+function dbg.opt(name, val) cmd_options(name, val) return dbg end
 function dbg.off() dbg.enabled = false end
 function dbg.on() dbg.enabled = true end
 
