@@ -1,4 +1,6 @@
-local lua_src = string.format("%q", io.open("debugger.lua"):read("a"))
+local lua_src_f = assert(io.open 'debugger.lua')
+local lua_src = string.format("%q", lua_src_f:read("a"))
+lua_src_f:close()
 
 -- Fix the weird escape characters
 lua_src = string.gsub(lua_src, "\\\n", "\\n")
@@ -114,4 +116,6 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int _msgh){
 }
 ]]
 
-io.open("debugger.c", "w"):write(c_src)
+local c_src_f = assert(io.open('debugger.c', 'w'))
+c_src_f:write(c_src)
+c_src_f:close()
