@@ -66,6 +66,7 @@ p(rint) [expression] - execute the expression and print the result
 f(inish) - step forward until exiting the current function
 u(p) - move up the stack by one frame
 d(own) - move down the stack by one frame
+w(here) - print source code around current line
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
@@ -144,6 +145,17 @@ local function table_merge(t1, t2)
 	for k, v in pairs(t2) do tbl[k] = v end
 	
 	return tbl
+end
+
+local function split_string(s, sep)
+  local sep = sep or "\n"
+  -- TODO(JRC): Improve this so that two consective separators produce an
+  -- empty string component.
+  local pattern = string.format("([^%s]+)", sep)
+
+  local comps = {}
+  string.gsub(s, pattern, function(c) table.insert(comps, c) end)
+  return comps
 end
 
 -- Create a table of all the locally accessible variables.
@@ -257,6 +269,36 @@ local function cmd_down()
 	return false
 end
 
+-- TODO(JRC): Add ability to specify the number of surrounding lines.
+local function cmd_where()
+  local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+
+  local source = info.source
+  local source_line = info.currentline
+
+  local source_filename = string.match(source, "^@(.*)$")
+  if source_filename then
+    local source_file = io.open(source_filename, "r")
+    if not source_file then source = nil
+    else source = source_file:read("*a"); source_file:close() end
+  end
+
+  if not source then
+    dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
+  else
+    local source_lines = split_string(source, "\n")
+
+    local source_start = math.max(1, source_line - 5)
+    local source_end = math.min(#source_lines, source_line + 5)
+
+    -- TODO(JRC): Improve the fomatting of the output by including line numbers
+    -- and better coloring.
+    for sidx = source_start, source_end do
+      dbg.writeln(COLOR_RED..(sidx == source_line and ">" or "").."\t"..COLOR_BLUE.."%s "..COLOR_RESET, source_lines[sidx])
+    end
+  end
+end
+
 local function cmd_trace()
 	local location = format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
@@ -308,6 +350,7 @@ local function match_command(line)
 		["p%s?(.*)"] = cmd_print,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
+		["w"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
