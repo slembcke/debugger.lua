@@ -269,12 +269,11 @@ local function cmd_down()
 	return false
 end
 
--- TODO(JRC): Add ability to specify the number of surrounding lines.
-local function cmd_where()
+local function cmd_where(line_num)
   local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 
   local source = info.source
-  local source_line = info.currentline
+  local source_current = info.currentline
 
   local source_filename = string.match(source, "^@(.*)$")
   if source_filename then
@@ -286,15 +285,17 @@ local function cmd_where()
   if not source then
     dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
   else
+    -- TODO(JRC): Modify this code so that the index values for newlines are
+    -- used instead of generated tables to improve memory use.
     local source_lines = split_string(source, "\n")
 
-    local source_start = math.max(1, source_line - 5)
-    local source_end = math.min(#source_lines, source_line + 5)
+    local line_num = tonumber(line_num) or 5
+    local source_start = math.max(1, source_current - line_num)
+    local source_end = math.min(#source_lines, source_current + line_num)
 
-    -- TODO(JRC): Improve the fomatting of the output by including line numbers
-    -- and better coloring.
     for sidx = source_start, source_end do
-      dbg.writeln(COLOR_RED..(sidx == source_line and ">" or "").."\t"..COLOR_BLUE.."%s "..COLOR_RESET, source_lines[sidx])
+      dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
+        tonumber(sidx), (sidx == source_current and "=> " or "   "), source_lines[sidx])
     end
   end
 end
@@ -350,7 +351,7 @@ local function match_command(line)
 		["p%s?(.*)"] = cmd_print,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
-		["w"] = cmd_where,
+		["w%s?(.*)"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
