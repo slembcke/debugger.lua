@@ -147,15 +147,24 @@ local function table_merge(t1, t2)
 	return tbl
 end
 
-local function split_string(s, sep)
+local function split_string(str, sep)
   local sep = sep or "\n"
-  -- TODO(JRC): Improve this so that two consective separators produce an
-  -- empty string component.
-  local pattern = string.format("([^%s]+)", sep)
+  local pattern = string.format("(.-)(%s)", sep)
 
-  local comps = {}
-  string.gsub(s, pattern, function(c) table.insert(comps, c) end)
-  return comps
+  local components = {}
+
+  local spos, epos, capture = string.find(str, pattern, 1)
+  local last_epos = 1
+  while spos do
+    table.insert(components, capture)
+    last_epos = epos + 1
+    spos, epos, capture = string.find(str, pattern, last_epos)
+  end
+  if last_epos <= #str then
+    table.insert(components, string.sub(str, last_epos))
+  end
+
+  return components
 end
 
 -- Create a table of all the locally accessible variables.
@@ -287,7 +296,7 @@ local function cmd_where(line_num)
   else
     -- TODO(JRC): Modify this code so that the index values for newlines are
     -- used instead of generated tables to improve memory use.
-    local source_lines = split_string(source, "\n")
+    local source_lines = split_string(source, '\n')
 
     local line_num = tonumber(line_num) or 5
     local source_start = math.max(1, source_current - line_num)
