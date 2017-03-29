@@ -66,7 +66,7 @@ p(rint) [expression] - execute the expression and print the result
 f(inish) - step forward until exiting the current function
 u(p) - move up the stack by one frame
 d(own) - move down the stack by one frame
-w(here) - print source code around current line
+w(here) [line count] - print source code around the current line
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
@@ -83,6 +83,8 @@ local stack_top = 0
 -- The current stack frame index.
 -- Changed using the up/down commands
 local stack_offset = 0
+
+local source_contents = {}
 
 local dbg
 
@@ -147,24 +149,24 @@ local function table_merge(t1, t2)
 	return tbl
 end
 
-local function split_string(str, sep)
+local function istring(str, sep)
   local sep = sep or "\n"
   local pattern = string.format("(.-)(%s)", sep)
 
-  local components = {}
+  local ipos, iidx = 1, 0
+  return function()
+    iidx = iidx + 1
 
-  local spos, epos, capture = string.find(str, pattern, 1)
-  local last_epos = 1
-  while spos do
-    table.insert(components, capture)
-    last_epos = epos + 1
-    spos, epos, capture = string.find(str, pattern, last_epos)
+    local spos, epos, capture = string.find(str, pattern, ipos)
+    if spos then
+      ipos = epos + 1
+      return iidx, capture
+    elseif ipos <= #str then
+      capture = string.sub(str, ipos)
+      ipos = #str + 1
+      return iidx, capture
+    end
   end
-  if last_epos <= #str then
-    table.insert(components, string.sub(str, last_epos))
-  end
-
-  return components
 end
 
 -- Create a table of all the locally accessible variables.
@@ -282,29 +284,32 @@ local function cmd_where(line_num)
   local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 
   local source = info.source
-  local source_current = info.currentline
+  local source_lidx = info.currentline
 
   local source_filename = string.match(source, "^@(.*)$")
   if source_filename then
-    local source_file = io.open(source_filename, "r")
-    if not source_file then source = nil
-    else source = source_file:read("*a"); source_file:close() end
+    if source_contents[source_filename] then
+      source = source_contents[source_filename]
+    else
+      local source_file = io.open(source_filename, "r")
+      if not source_file then source = nil
+      else source = source_file:read("*a"); source_file:close() end
+
+      source_contents[source_filename] = source
+    end
   end
 
   if not source then
     dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
   else
-    -- TODO(JRC): Modify this code so that the index values for newlines are
-    -- used instead of generated tables to improve memory use.
-    local source_lines = split_string(source, '\n')
-
     local line_num = tonumber(line_num) or 5
-    local source_start = math.max(1, source_current - line_num)
-    local source_end = math.min(#source_lines, source_current + line_num)
+    local line_min, line_max = source_lidx - line_num, source_lidx + line_num
 
-    for sidx = source_start, source_end do
-      dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
-        tonumber(sidx), (sidx == source_current and "=> " or "   "), source_lines[sidx])
+    for lidx, source_line in istring(source, "\n") do
+      if lidx >= line_min and lidx <= line_max then
+        dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
+          tonumber(lidx), (lidx == source_lidx and "=> " or "   "), source_line)
+      end
     end
   end
 end
