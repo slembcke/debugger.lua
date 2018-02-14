@@ -67,7 +67,7 @@ typedef int (*lua_CFunction)(lua_State *L);
 
 
 // This function must be called before calling dbg_pcall() to set up the debugger module.
-// 'name' must be the name of the module to register the debugger as. (ex: to use with 'reqiure(name)')
+// 'name' must be the name of the module to register the debugger as. (ex: to use with 'require(name)')
 // 'globalName' can either be NULL or a global variable name to assign the debugger to. (I use "dbg")
 // 'readFunc' is a lua_CFunction that returns a line of input when called. Pass NULL if you want to read from stdin.
 // 'writeFunc' is a lua_CFunction that takes a single string as an argument. Pass NULL if you want to write to stdout.
