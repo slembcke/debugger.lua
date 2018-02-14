@@ -69,7 +69,7 @@ d(own) - move down the stack by one frame
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
-]]
+q(uit) - halt execution]]
 
 -- The stack level that cmd_* functions use to access locals or info
 -- The structure of the code very carefully ensures this.
@@ -311,6 +311,7 @@ local function match_command(line)
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
+		["q"] = function() os.exit(0) end,
 	}
 	
 	for cmd, cmd_func in pairs(commands) do

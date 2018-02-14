@@ -117,6 +117,7 @@ If you have used other CLI debuggers, debugger.lua should present no surprises. 
 	t(race) - print the stack trace
 	l(ocals) - print the function arguments, locals and upvalues.
 	h(elp) - print this message
+	q(uit) - halt execution
 
 If you've never used a CLI debugger before. Start a nice warm cozy fire, run tutorial.lua and open it up in your favorite editor so you can follow along.
 
