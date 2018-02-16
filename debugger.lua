@@ -59,7 +59,7 @@ end
 
 local help_message = [[
 [return] - re-run last command
-c(ontinue) - contiue execution
+c(ontinue) - continue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
 p(rint) [expression] - execute the expression and print the result
