@@ -499,8 +499,6 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 		end)
 
 		dbg.read = function(prompt)
-			-- Linenoise doesn't play nice with non-printing characters in the prompt.
-			prompt = prompt:gsub("\027%[[%d;]+m", "")
 			local str = linenoise.linenoise(prompt)
 			if str and not str:match "^%s*$" then
 				linenoise.historyadd(str)
