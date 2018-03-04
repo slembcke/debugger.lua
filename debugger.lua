@@ -421,13 +421,13 @@ end
 
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, l)
-	return (xpcall(f, function(err)
+	return xpcall(f, function(err)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, (l or 0) + 1)
 		
 		-- Prevent a tail call to dbg().
 		return
-	end))
+	end)
 end
 
 -- Error message handler that can be used with lua_pcall().
