@@ -136,6 +136,7 @@ local function format_stack_frame_info(info)
 end
 
 local repl
+local lua_error = _G.error
 
 -- Return false for stack frames without a source file,
 -- which includes C frames and pre-compiled Lua bytecode.
@@ -148,19 +149,21 @@ local function hook_factory(repl_threshold)
 		return function(event, _)
 			local info = debug.getinfo(2)
 			local has_file = frame_has_file(info)
-			
-			if event == "call" and has_file then
-				offset = offset + 1
-			elseif event == "return" and has_file then
-				if offset <= repl_threshold then
-					-- TODO this is what causes the duplicated lines
-					-- Don't remember why this is even here...
-					--repl()
-				else
+
+			-- Ignore non-Lua hook events.
+			if has_file then
+				if event == "call" then
+					offset = offset + 1
+				elseif event == "return" then
 					offset = offset - 1
+				elseif event == "line" then
+					if offset <= repl_threshold then repl() end
 				end
-			elseif event == "line" and offset <= repl_threshold then
-				repl()
+
+			-- Except for the built-in `_G.error` function,
+			-- which resets the `offset` so repl() is called.
+			elseif info.func == lua_error then
+				offset = -1
 			end
 		end
 	end
