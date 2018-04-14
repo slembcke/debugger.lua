@@ -223,7 +223,9 @@ function cmd_next()
 end
 
 function cmd_finish()
-	return true, hook_finish
+	local offset = stack_top - stack_offset
+	stack_offset = stack_top
+	return true, offset < 0 and hook_factory(offset - 1) or hook_finish
 end
 
 local function cmd_print(expr)
