@@ -297,37 +297,38 @@ local function cmd_down()
 end
 
 local function cmd_where(line_num)
-  local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+	if not info then return end
 
-  local source = info.source
-  local source_lidx = info.currentline
+	local source = info.source
+	local source_lidx = info.currentline
 
-  local source_filename = string.match(source, "^@(.*)$")
-  if source_filename then
-    if source_contents[source_filename] then
-      source = source_contents[source_filename]
-    else
-      local source_file = io.open(source_filename, "r")
-      if not source_file then source = nil
-      else source = source_file:read("*a"); source_file:close() end
+	local source_filename = string.match(source, "^@(.*)$")
+	if source_filename then
+		if source_contents[source_filename] then
+			source = source_contents[source_filename]
+		else
+			local source_file = io.open(source_filename, "r")
+			if not source_file then source = nil
+			else source = source_file:read("*a"); source_file:close() end
 
-      source_contents[source_filename] = source
-    end
-  end
+			source_contents[source_filename] = source
+		end
+	end
 
-  if not source then
-    dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
-  else
-    local line_num = tonumber(line_num) or 5
-    local line_min, line_max = source_lidx - line_num, source_lidx + line_num
+	if not source then
+		dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
+	else
+		local line_num = tonumber(line_num) or 5
+		local line_min, line_max = source_lidx - line_num, source_lidx + line_num
 
-    for lidx, source_line in istring(source, "\n") do
-      if lidx >= line_min and lidx <= line_max then
-        dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
-          tonumber(lidx), (lidx == source_lidx and "=> " or "   "), source_line)
-      end
-    end
-  end
+		for lidx, source_line in istring(source, "\n") do
+			if lidx >= line_min and lidx <= line_max then
+				dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
+				tonumber(lidx), (lidx == source_lidx and "=> " or "   "), source_line)
+			end
+		end
+	end
 end
 
 local function cmd_trace()
