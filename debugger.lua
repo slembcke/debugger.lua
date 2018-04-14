@@ -212,6 +212,20 @@ end
 -- Wee version differences
 local unpack = unpack or table.unpack
 
+function cmd_step()
+	stack_offset = stack_top
+	return true, hook_step
+end
+
+function cmd_next()
+	stack_offset = stack_top
+	return true, hook_next
+end
+
+function cmd_finish()
+	return true, hook_finish
+end
+
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
 	local chunk = compile_chunk("return ("..expr..")", env)
@@ -318,9 +332,9 @@ local last_cmd = false
 local function match_command(line)
 	local commands = {
 		["c"] = function() return true end,
-		["s"] = function() return true, hook_step end,
-		["n"] = function() return true, hook_next end,
-		["f"] = function() return true, hook_finish end,
+		["s"] = cmd_step,
+		["n"] = cmd_next,
+		["f"] = cmd_finish,
 		["p%s?(.*)"] = cmd_print,
 		["e%s?(.*)"] = cmd_eval,
 		["u"] = cmd_up,
