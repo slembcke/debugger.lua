@@ -293,6 +293,22 @@ local function cmd_trace()
 	return false
 end
 
+local function cmd_go(offset)
+	offset = stack_top + tonumber(offset)
+	local info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
+	if info then
+		stack_offset = offset
+		dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
+	else
+		dbg.writeln(COLOR_BLUE.."Out of range."..COLOR_RESET)
+		stack_offset = stack_offset + 1
+		stack_top = stack_top + 1
+		cmd_trace()
+		stack_top = stack_top - 1
+		stack_offset = stack_offset - 1
+	end
+end
+
 local function cmd_locals()
 	local bindings = local_bindings(1, false)
 	
@@ -326,6 +342,7 @@ local function match_command(line)
 		["u"] = cmd_up,
 		["d"] = cmd_down,
 		["t"] = cmd_trace,
+		["g%s?(%d+)"] = cmd_go,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
 		["q"] = function() os.exit(0) end,
