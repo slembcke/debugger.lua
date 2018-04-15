@@ -425,8 +425,7 @@ function dbg.call(f, ...)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, 2)
 
-		-- Prevent a tail call to dbg().
-		return
+		return err
 	end
 	if select('#', ...) > 0 then
 		local args = {...}
