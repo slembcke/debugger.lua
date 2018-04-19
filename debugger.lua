@@ -45,7 +45,14 @@ local function pretty(obj, max_depth)
 		if type(obj) == "string" then
 			-- Dump the string so that escape sequences are printed.
 			return string.format("%q", obj)
-		elseif type(obj) == "table" and not coerceable(obj) and depth <= max_depth then
+		elseif type(obj) == "table" and not coerceable(obj) then
+			if pairs(obj)(obj) == nil then
+				return '{}' -- Always print empty tables.
+			end
+			if depth > max_depth then
+				return tostring(obj)
+			end
+
 			local str = "{"
 			depth = depth + 1
 
