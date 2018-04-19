@@ -322,7 +322,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
-			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
+			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v, true))
 		end
 	end
 	
