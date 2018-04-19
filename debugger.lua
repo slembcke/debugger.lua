@@ -105,9 +105,16 @@ local function dbg_writeln(str, ...)
 	dbg.write((str or "").."\n", ...)
 end
 
+local cwd = '^' .. os.getenv('PWD') .. '/'
+local home = '^' .. os.getenv('HOME') .. '/'
 local function format_stack_frame_info(info)
-	local fname = (info.name or string.format("<%s:%d>", info.short_src, info.linedefined))
-	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", info.short_src, info.currentline, fname)
+	local path = info.source:sub(2)
+	path = path:gsub(cwd, './'):gsub(home, '~/')
+	if #path > 50 then
+		path = '...' .. path:sub(-47)
+	end
+	local fname = (info.name or string.format("<%s:%d>", path, info.linedefined))
+	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", path, info.currentline, fname)
 end
 
 local repl
