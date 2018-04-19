@@ -31,30 +31,39 @@ local COLOR_RED = ""
 local COLOR_BLUE = ""
 local COLOR_RESET = ""
 
-local function pretty(obj, recurse)
+local function pretty(obj, max_depth)
+	if max_depth == nil then max_depth = 1 end
+
 	-- Returns true if a table has a __tostring metamethod.
 	local function coerceable(tbl)
 		local meta = getmetatable(tbl)
 		return (meta and meta.__tostring)
 	end
-	
-	if type(obj) == "string" then
-		-- Dump the string so that escape sequences are printed.
-		return string.format("%q", obj)
-	elseif type(obj) == "table" and not coerceable(obj) and not recurse then
-		local str = "{"
-		
-		for k, v in pairs(obj) do
-			local pair = pretty(k, true).." = "..pretty(v, true)
-			str = str..(str == "{" and pair or ", "..pair)
+
+	local depth = 1
+	local function recurse(obj)
+		if type(obj) == "string" then
+			-- Dump the string so that escape sequences are printed.
+			return string.format("%q", obj)
+		elseif type(obj) == "table" and not coerceable(obj) and depth <= max_depth then
+			local str = "{"
+			depth = depth + 1
+
+			for k, v in pairs(obj) do
+				local pair = pretty(k, 0).." = "..recurse(v)
+				str = str..(str == "{" and pair or ", "..pair)
+			end
+
+			depth = depth - 1
+			return str.."}"
+		else
+			-- tostring() can fail if there is an error in a __tostring metamethod.
+			local success, value = pcall(function() return tostring(obj) end)
+			return (success and value or "<!!error in __tostring metamethod!!>")
 		end
-		
-		return str.."}"
-	else
-		-- tostring() can fail if there is an error in a __tostring metamethod.
-		local success, value = pcall(function() return tostring(obj) end)
-		return (success and value or "<!!error in __tostring metamethod!!>")
 	end
+
+	return recurse(obj)
 end
 
 local help_message = [[
@@ -235,7 +244,7 @@ local function cmd_print(expr)
 	else
 		local result = ""
 		for i = 2, #results do
-			result = result..(i ~= 2 and ", " or "")..pretty(results[i])
+			result = result..(i ~= 2 and ", " or "")..pretty(results[i], 3)
 		end
 		
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..result)
@@ -329,7 +338,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
-			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v, true))
+			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v, 0))
 		end
 	end
 	
