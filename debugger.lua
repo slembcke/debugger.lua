@@ -62,10 +62,10 @@ local help_message = [[
 c(ontinue) - continue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
+f(inish) - step forward until exiting the inspected frame
+u(p) - inspect the next frame up the stack
+d(own) - inspect the next frame down the stack
 p(rint) [expression] - execute the expression and print the result
-f(inish) - step forward until exiting the current function
-u(p) - move up the stack by one frame
-d(own) - move down the stack by one frame
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
