@@ -79,10 +79,10 @@ local help_message = [[
 c(ontinue) - continue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
+f(inish) - step forward until exiting the inspected frame
+u(p) - inspect the next frame up the stack
+d(own) - inspect the next frame down the stack
 p(rint) [expression] - execute the expression and print the result
-f(inish) - step forward until exiting the current function
-u(p) - move up the stack by one frame
-d(own) - move down the stack by one frame
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
@@ -239,6 +239,22 @@ local pack = table.pack or function(...)
 	return {n = select("#", ...), ...}
 end
 
+function cmd_step()
+	stack_offset = stack_top
+	return true, hook_step
+end
+
+function cmd_next()
+	stack_offset = stack_top
+	return true, hook_next
+end
+
+function cmd_finish()
+	local offset = stack_top - stack_offset
+	stack_offset = stack_top
+	return true, offset < 0 and hook_factory(offset - 1) or hook_finish
+end
+
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
 	local chunk = compile_chunk("return ("..expr..")", env)
@@ -361,9 +377,9 @@ local last_cmd = false
 local function match_command(line)
 	local commands = {
 		["c"] = function() return true end,
-		["s"] = function() return true, hook_step end,
-		["n"] = function() return true, hook_next end,
-		["f"] = function() return true, hook_finish end,
+		["s"] = cmd_step,
+		["n"] = cmd_next,
+		["f"] = cmd_finish,
 		["p%s?(.*)"] = cmd_print,
 		["e%s?(.*)"] = cmd_eval,
 		["u"] = cmd_up,
