@@ -246,15 +246,15 @@ local function cmd_print(expr)
 	-- The first result is the pcall error.
 	if not results[1] then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
-	elseif #results == 1 then
-		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_BLUE.."<no result>"..COLOR_RESET)
 	else
-		local result = ""
-		for i = 2, #results do
-			result = result..(i ~= 2 and ", " or "")..pretty(results[i], 3)
+		local output = ""
+		for i = 2, table.maxn(results) do
+			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
 		end
-		
-		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..result)
+		if output == "" then
+			output = "nil"
+		end
+		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
 	end
 	
 	return false
