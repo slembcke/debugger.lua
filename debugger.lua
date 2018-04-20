@@ -29,6 +29,7 @@
 -- Use ANSI color codes in the prompt by default.
 local COLOR_RED = ""
 local COLOR_BLUE = ""
+local COLOR_GRAY = ""
 local COLOR_RESET = ""
 
 local function pretty(obj, max_depth)
@@ -234,6 +235,9 @@ end
 
 -- Wee version differences
 local unpack = unpack or table.unpack
+local pack = table.pack or function(...)
+	return {n = select("#", ...), ...}
+end
 
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
@@ -241,18 +245,18 @@ local function cmd_print(expr)
 	if chunk == nil then return false end
 	
 	-- Call the chunk and collect the results.
-	local results = {pcall(chunk, unpack(rawget(env, "...") or {}))}
-	
+	local results = pack(pcall(chunk, unpack(rawget(env, "...") or {})))
+
 	-- The first result is the pcall error.
 	if not results[1] then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
 	else
 		local output = ""
-		for i = 2, table.maxn(results) do
+		for i = 2, results.n do
 			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
 		end
 		if output == "" then
-			output = "nil"
+			output = COLOR_GRAY.."<no result>"
 		end
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
 	end
@@ -517,6 +521,7 @@ local color_maybe_supported = (stdout_isatty and os.getenv("TERM") and os.getenv
 if color_maybe_supported and not os.getenv("DBG_NOCOLOR") then
 	COLOR_RED = string.char(27) .. "[31m"
 	COLOR_BLUE = string.char(27) .. "[34m"
+	COLOR_GRAY = string.char(27) .. "[38;5;59m"
 	COLOR_RESET = string.char(27) .. "[0m"
 end
 
