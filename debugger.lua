@@ -136,14 +136,21 @@ end
 
 local repl
 
+-- Return false for stack frames without a source file,
+-- which includes C frames and pre-compiled Lua bytecode.
+local function frame_has_file(info)
+	return info.source:match('^@[%.%/]') ~= nil
+end
+
 local function hook_factory(repl_threshold)
 	return function(offset)
 		return function(event, _)
 			local info = debug.getinfo(2)
+			local has_file = frame_has_file(info)
 			
-			if event == "call" and info.linedefined >= 0 then
+			if event == "call" and has_file then
 				offset = offset + 1
-			elseif event == "return" and info.linedefined >= 0 then
+			elseif event == "return" and has_file then
 				if offset <= repl_threshold then
 					-- TODO this is what causes the duplicated lines
 					-- Don't remember why this is even here...
@@ -299,7 +306,7 @@ local function cmd_up()
 		offset = offset + 1
 		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
 		if not info then break end
-	until info.linedefined >= 0 -- only Lua frames pass this
+	until frame_has_file(info)
 
 	if info then
 		stack_offset = offset
@@ -319,7 +326,7 @@ local function cmd_down()
 		offset = offset - 1
 		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
 		if not info then break end
-	until info.linedefined >= 0 -- only Lua frames pass this
+	until frame_has_file(info)
 
 	if info then
 		stack_offset = offset
