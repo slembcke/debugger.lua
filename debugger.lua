@@ -151,8 +151,9 @@ end
 
 local function find_pcaller()
 	local found_pcall = false
-	do local i = 4; repeat
+	local i = 4; while true do
 		local info = debug.getinfo(i)
+		if info == nil then return end
 		if found_pcall then
 			if frame_has_file(info) then
 				return info.func
@@ -161,7 +162,7 @@ local function find_pcaller()
 			found_pcall = true
 		end
 		i = i + 1
-	until info == nil end
+	end
 end
 
 local active_hook, active_func
