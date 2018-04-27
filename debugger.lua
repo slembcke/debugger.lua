@@ -264,7 +264,7 @@ end
 
 local function cmd_print(expr)
 	local env = local_bindings(1, true)
-	local chunk = compile_chunk("return ("..expr..")", env)
+	local chunk = compile_chunk("return "..expr, env)
 	if chunk == nil then return false end
 	
 	-- Call the chunk and collect the results.
