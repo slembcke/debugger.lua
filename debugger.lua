@@ -302,11 +302,10 @@ end
 local function cmd_up()
 	local offset = stack_offset
 	local info
-	repeat -- Skip over C frames.
+	repeat -- Find the next frame with a file.
 		offset = offset + 1
 		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
-		if not info then break end
-	until frame_has_file(info)
+	until not info or frame_has_file(info)
 
 	if info then
 		stack_offset = offset
@@ -322,11 +321,12 @@ end
 local function cmd_down()
 	local offset = stack_offset
 	local info
-	repeat -- Skip over C frames.
+	-- Find the next frame with a file.
+	while offset > stack_top do
 		offset = offset - 1
 		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
-		if not info then break end
-	until frame_has_file(info)
+		if frame_has_file(info) then break end
+	end
 
 	if info then
 		stack_offset = offset
