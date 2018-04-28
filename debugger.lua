@@ -169,12 +169,29 @@ local hook_step = hook_factory(1)
 local hook_next = hook_factory(0)
 local hook_finish = hook_factory(-1)
 
-local function table_merge(t1, t2)
-	local tbl = {}
-	for k, v in pairs(t1) do tbl[k] = v end
-	for k, v in pairs(t2) do tbl[k] = v end
-	
-	return tbl
+local function local_bind(offset, name, value)
+	local level = stack_offset + offset + LOCAL_STACK_LEVEL
+
+	-- Mutating a local?
+	do local i = 1; repeat
+		local var = debug.getlocal(level, i)
+		if name == var then
+			return debug.setlocal(level, i, value)
+		end
+		i = i + 1
+	until var == nil end
+
+	-- Mutating an upvalue?
+	local func = debug.getinfo(level).func
+	do local i = 1; repeat
+		local var = debug.getupvalue(func, i)
+		if name == var then
+			return debug.setupvalue(func, i, value)
+		end
+		i = i + 1
+	until var == nil end
+
+	dbg.writeln(COLOR_RED.."Error: "..COLOR_RESET.."Unknown local variable: "..name)
 end
 
 -- Create a table of all the locally accessible variables.
@@ -208,12 +225,9 @@ local function local_bindings(offset, include_globals)
 	if #varargs ~= 0 then bindings["..."] = varargs end
 	
 	if include_globals then
-		-- Merge the local bindings over the top of the environment table.
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
-		
-		-- Finally, merge the tables and add a lookup for globals.
-		return setmetatable(table_merge(env or {}, bindings), {__index = _G})
+		return setmetatable(bindings, {__index = env or _G})
 	else
 		return bindings
 	end
@@ -287,14 +301,29 @@ local function cmd_print(expr)
 	return false
 end
 
-local function cmd_eval(stat)
-	local env = local_bindings(1, true)
-	local chunk = compile_chunk(stat, env)
+local function cmd_eval(code)
+	local index = local_bindings(1, true)
+	local env = setmetatable({}, {
+		__index = index,
+		__newindex = function(env, name, value)
+			local_bind(4, name, value)
+		end
+	})
+
+	local chunk = compile_chunk(code, env)
 	if chunk == nil then return false end
-	
+
 	-- Call the chunk and collect the results.
-	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
-	if not success then
+	local success, err = pcall(chunk, unpack(rawget(index, "...") or {}))
+	if success then
+		-- Look for assigned variable names.
+		local names = code:match("^([^{=]+)%s?=[^=]")
+		if names then
+			stack_offset = stack_offset + 1
+			cmd_print(names)
+			stack_offset = stack_offset - 1
+		end
+	else
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
 	end
 end
