@@ -136,6 +136,12 @@ local function format_stack_frame_info(info)
 end
 
 local repl
+local threw = false
+local caught = false
+local pcaller
+local lua_error = _G.error
+local lua_pcall = _G.pcall
+local lua_xpcall = _G.xpcall
 
 -- Return false for stack frames without a source file,
 -- which includes C frames and pre-compiled Lua bytecode.
@@ -143,26 +149,118 @@ local function frame_has_file(info)
 	return info.what == "main" or info.source:match("^@[%.%/]") ~= nil
 end
 
+local function find_pcaller()
+	local found_pcall = false
+	local i = 4; while true do
+		local info = debug.getinfo(i)
+		if info == nil then return end
+		if found_pcall then
+			if frame_has_file(info) then
+				return info.func
+			end
+		elseif info.func == lua_pcall or info.func == lua_xpcall then
+			found_pcall = true
+		end
+		i = i + 1
+	end
+end
+
+-- Find the nearest Lua frame offset.
+local function get_lua_offset(top)
+	local i = top
+	while true do
+		local info = debug.getinfo(i + 3)
+		if not info then return top end
+		if frame_has_file(info) then
+			return i
+		end
+		i = i + 1
+	end
+end
+
+local active_hook, active_func
 local function hook_factory(repl_threshold)
 	return function(offset)
-		return function(event, _)
+		local hook, base_depth
+		hook = function(event)
 			local info = debug.getinfo(2)
 			local has_file = frame_has_file(info)
-			
-			if event == "call" and has_file then
-				offset = offset + 1
-			elseif event == "return" and has_file then
-				if offset <= repl_threshold then
-					-- TODO this is what causes the duplicated lines
-					-- Don't remember why this is even here...
-					--repl()
-				else
-					offset = offset - 1
+
+			if jit and has_file then
+				-- Check for the first event of this hook.
+				if hook ~= active_hook then
+					base_depth = select(2, debug.traceback():gsub("\n", "")) - offset
+					if event == "call" and active_func ~= info.func then
+						-- First event is a non-recursive function call.
+						base_depth = base_depth - 1
+					else
+						active_func = info.func
+					end
+					active_hook = hook
 				end
-			elseif event == "line" and offset <= repl_threshold then
-				repl()
+
+				-- Check for a function return. (implicit or explicit)
+				if event == "line" then
+					if active_func ~= info.func then
+						local depth = select(2, debug.traceback():gsub("\n", ""))
+						offset = depth - base_depth
+						active_func = info.func
+					end
+
+				-- Check for a non-recursive function call.
+				elseif event == "call" then
+					if active_func ~= info.func then
+						offset = offset + 1
+						active_func = info.func
+					end
+				end
+			end
+
+			-- Entering dbg.call
+			if caught and threw then
+				threw, stack_top, stack_offset = false, 1, get_lua_offset(1)
+				-- stop the infinite search for pcall
+				offset = -1
+
+			-- Exiting dbg.call
+			elseif caught then
+				caught, stack_top, stack_offset = false, 0, 0
+				-- step/next/finish all do the same thing here
+				offset = repl_threshold + 1
+
+			elseif threw then
+				-- Looking for the pcaller
+				if info.func == pcaller then
+					threw = false
+					offset = -1
+				elseif event == "line" then
+					return -- Avoid repl calls until the pcaller is reached.
+				end
+			end
+
+			-- Ignore non-Lua hook events
+			if has_file then
+				if event == "line" then
+					if offset <= repl_threshold then
+						active_hook = nil
+						repl()
+					end
+				elseif not jit then
+					if event == "call" then
+						offset = offset + 1
+					else
+						offset = offset - 1
+					end
+				end
+
+			-- Find the frame that used pcall/xcall
+			elseif info.func == lua_error then
+				threw = true
+				offset = math.huge
+				pcaller = find_pcaller()
 			end
 		end
+		return hook
 	end
 end
 
@@ -537,8 +635,11 @@ end
 function dbg.call(f, ...)
 	local catch = function(err)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
-		dbg(false, 2)
-
+		caught = true
+		if active_hook == nil then
+			threw = true
+			debug.sethook(hook_next(1), "crl")
+		end
 		return err
 	end
 	if select('#', ...) > 0 then
