@@ -439,6 +439,14 @@ local function match_command(line)
 	end
 end
 
+-- Try loading a chunk with a leading return.
+local function is_expression(block)
+	if _VERSION <= "Lua 5.1" then
+		return loadstring("return "..block, source) ~= nil
+	end
+	return load("return "..block, source, "t") ~= nil
+end
+
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
@@ -447,18 +455,25 @@ local function run_command(line)
 		dbg.writeln()
 		return true
 	end
-	
+
 	-- Re-execute the last command if you press return.
 	if line == "" then
-		if last_cmd then line = last_cmd else return false end
-	else
-		last_cmd = line
+		line = last_cmd or "h"
 	end
-	
+
 	local command, command_arg = match_command(line)
 	if command then
+		-- Some commands are not worth repeating.
+		if not line:match("^[hlt]$") then
+			last_cmd = line
+		end
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
+	elseif #line > 1 then
+		-- Evaluate the chunk appropriately.
+		stack_offset = stack_offset + 1
+		if is_expression(line) then cmd_print(line) else cmd_eval(line) end
+		stack_offset = stack_offset - 1
 	else
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
