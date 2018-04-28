@@ -355,12 +355,11 @@ end
 local function cmd_down()
 	local offset = stack_offset
 	local info
-	-- Find the next frame with a file.
-	while offset > stack_top do
+	repeat -- Find the next frame with a file.
 		offset = offset - 1
+		if offset < stack_top then info = nil; break end
 		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
-		if frame_has_file(info) then break end
-	end
+	until frame_has_file(info)
 
 	if info then
 		stack_offset = offset
