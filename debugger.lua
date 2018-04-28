@@ -557,8 +557,8 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 		linenoise.historyload(hist_path)
 		linenoise.historysetmaxlen(50)
 
-		local autocomplete = function(scope, input, matches)
-			for name, _ in pairs(scope) do
+		local function autocomplete(env, input, matches)
+			for name, _ in pairs(env) do
 				if name:match('^' .. input .. '.*') then
 					linenoise.addcompletion(matches, name)
 				end
@@ -567,8 +567,13 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 
 		-- Auto-completion for locals and globals
 		linenoise.setcompletion(function(matches, input)
-			autocomplete(local_bindings(1, false), input, matches)
-			autocomplete(_G, input, matches)
+			-- First, check the locals and upvalues.
+			local env = local_bindings(1, true)
+			autocomplete(env, input, matches)
+
+			-- Then, check the implicit environment.
+			env = getmetatable(env).__index
+			autocomplete(env, input, matches)
 		end)
 
 		dbg.read = function(prompt)
