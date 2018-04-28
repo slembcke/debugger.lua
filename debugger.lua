@@ -83,6 +83,7 @@ f(inish) - step forward until exiting the inspected frame
 u(p) - inspect the next frame up the stack
 d(own) - inspect the next frame down the stack
 p(rint) [expression] - execute the expression and print the result
+e(val) [statement] - execute the statement
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
