@@ -539,9 +539,9 @@ end
 -- Try loading a chunk with a leading return.
 local function is_expression(block)
 	if _VERSION <= "Lua 5.1" then
-		return loadstring("return "..block, source) ~= nil
+		return loadstring("return "..block, "") ~= nil
 	end
-	return load("return "..block, source, "t") ~= nil
+	return load("return "..block, "", "t") ~= nil
 end
 
 -- Run a command line
@@ -566,15 +566,15 @@ local function run_command(line)
 		end
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
-	elseif #line > 1 then
-		-- Evaluate the chunk appropriately.
-		stack_offset = stack_offset + 1
-		if is_expression(line) then cmd_print(line) else cmd_eval(line) end
-		stack_offset = stack_offset - 1
-	else
+	end
+
+	if #line == 1 then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
+
+	-- Evaluate the chunk appropriately.
+	if is_expression(line) then cmd_print(line) else cmd_eval(line) end
 end
 
 repl = function()
