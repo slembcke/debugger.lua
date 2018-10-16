@@ -114,6 +114,7 @@ If you have used other CLI debuggers, debugger.lua should present no surprises. 
 	f(inish) - step forward until exiting the current function
 	u(p) - move up the stack by one frame
 	d(own) - move down the stack by one frame
+	w(here) [line count] - print source code around the current line
 	t(race) - print the stack trace
 	l(ocals) - print the function arguments, locals and upvalues.
 	h(elp) - print this message

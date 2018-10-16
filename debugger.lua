@@ -79,11 +79,12 @@ local help_message = [[
 c(ontinue) - continue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
-f(inish) - step forward until exiting the inspected frame
-u(p) - inspect the next frame up the stack
-d(own) - inspect the next frame down the stack
-p(rint) [expression] - execute the expression and print the result
+f(inish) - step forward until exiting the current function
+u(p) - move up the stack by one frame
+d(own) - move down the stack by one frame
+w(here) [line count] - print source code around the current line
 e(val) [statement] - execute the statement
+p(rint) [expression] - execute the expression and print the result
 t(race) - print the stack trace
 l(ocals) - print the function arguments, locals and upvalues.
 h(elp) - print this message
@@ -100,6 +101,8 @@ local stack_top = 0
 -- The current stack frame index.
 -- Changed using the up/down commands
 local stack_offset = 0
+
+local source_contents = {}
 
 local dbg
 
@@ -193,6 +196,26 @@ local function local_bind(offset, name, value)
 	until var == nil end
 
 	dbg.writeln(COLOR_RED.."Error: "..COLOR_RESET.."Unknown local variable: "..name)
+end
+
+local function istring(str, sep)
+  local sep = sep or "\n"
+  local pattern = string.format("(.-)(%s)", sep)
+
+  local ipos, iidx = 1, 0
+  return function()
+    iidx = iidx + 1
+
+    local spos, epos, capture = string.find(str, pattern, ipos)
+    if spos then
+      ipos = epos + 1
+      return iidx, capture
+    elseif ipos <= #str then
+      capture = string.sub(str, ipos)
+      ipos = #str + 1
+      return iidx, capture
+    end
+  end
 end
 
 -- Create a table of all the locally accessible variables.
@@ -372,6 +395,41 @@ local function cmd_down()
 	return false
 end
 
+local function cmd_where(line_num)
+	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+	if not info then return end
+
+	local source = info.source
+	local source_lidx = info.currentline
+
+	local source_filename = string.match(source, "^@(.*)$")
+	if source_filename then
+		if source_contents[source_filename] then
+			source = source_contents[source_filename]
+		else
+			local source_file = io.open(source_filename, "r")
+			if not source_file then source = nil
+			else source = source_file:read("*a"); source_file:close() end
+
+			source_contents[source_filename] = source
+		end
+	end
+
+	if not source then
+		dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
+	else
+		local line_num = tonumber(line_num) or 5
+		local line_min, line_max = source_lidx - line_num, source_lidx + line_num
+
+		for lidx, source_line in istring(source, "\n") do
+			if lidx >= line_min and lidx <= line_max then
+				dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
+				tonumber(lidx), (lidx == source_lidx and "=> " or "   "), source_line)
+			end
+		end
+	end
+end
+
 local function cmd_trace()
 	local location = format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
 	local offset = stack_offset - stack_top
@@ -424,6 +482,7 @@ local function match_command(line)
 		["e (.*)"] = cmd_eval,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
+		["w%s?(%d*)"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
