@@ -141,9 +141,10 @@ end
 local repl
 
 -- Return false for stack frames without a source file,
--- which includes C frames and pre-compiled Lua bytecode.
+-- which includes (a) C code, (b) Lua bytecode, and
+-- (c) `loadstring` functions (except in LuaJIT)
 local function frame_has_file(info)
-	return info.what == "main" or info.source:match("^@[%.%/]") ~= nil
+	return info.source:sub(1, 1) == "@"
 end
 
 local function hook_factory(repl_threshold)
