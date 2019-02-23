@@ -427,22 +427,31 @@ else
 end
 
 -- Assume stdin/out are TTYs unless we can use LuaJIT's FFI to properly check them.
-local stdin_isatty = true
-local stdout_isatty = true
+local stdin_isatty = 1
+local stdout_isatty = 1
 
 -- Conditionally enable the LuaJIT FFI.
 local ffi = (jit and require("ffi"))
 if ffi then
 	ffi.cdef[[
-		bool isatty(int);
+		#if defined(__linux__)
+			#include <unistd.h>
+			#define ISATTY(FD) isatty(FD)
+		#elif defined(__APPLE__)
+			#include <unistd.h>
+			#define ISATTY(FD) isatty(FD)
+		#elif defined(_WIN32)
+			#include <Windows.h>
+			#define ISATTY(FD) _isatty(FD)
+		#endif
 		void free(void *ptr);
 		
 		char *readline(const char *);
 		int add_history(const char *);
 	]]
 	
-	stdin_isatty = ffi.C.isatty(0)
-	stdout_isatty = ffi.C.isatty(1)
+	stdin_isatty = ffi.C.ISATTY(0)
+	stdout_isatty = ffi.C.ISATTY(1)
 end
 
 -- Conditionally enable color support.
