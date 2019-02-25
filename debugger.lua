@@ -249,9 +249,6 @@ end
 
 -- Wee version differences
 local unpack = unpack or table.unpack
-local pack = table.pack or function(...)
-	return {n = select("#", ...), ...}
-end
 
 function cmd_step()
 	stack_offset = stack_top
@@ -275,19 +272,19 @@ local function cmd_print(expr)
 	if chunk == nil then return false end
 	
 	-- Call the chunk and collect the results.
-	local results = pack(pcall(chunk, unpack(rawget(env, "...") or {})))
+	local results = {pcall(chunk, unpack(rawget(env, "...") or {}))}
 
 	-- The first result is the pcall error.
 	if not results[1] then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
 	else
 		local output = ""
-		for i = 2, results.n do
-			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
+		for i = 2, #results do
+			output = output..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
-		if output == "" then
-			output = "<no result>"
-		end
+		
+		if output == "" then output = "<no result>" end
+		
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
 	end
 	
@@ -439,7 +436,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
-			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v, 0))
+			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
 	
