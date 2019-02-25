@@ -32,37 +32,23 @@ local COLOR_BLUE = ""
 local COLOR_GRAY = ""
 local COLOR_RESET = ""
 
-local function pretty(obj, max_depth)
-	if max_depth == nil then max_depth = 1 end
-
+local function pretty(obj)
 	-- Returns true if a table has a __tostring metamethod.
 	local function coerceable(tbl)
 		local meta = getmetatable(tbl)
 		return (meta and meta.__tostring)
 	end
 
-	local depth = 1
 	local function recurse(obj)
 		if type(obj) == "string" then
 			-- Dump the string so that escape sequences are printed.
 			return string.format("%q", obj)
 		elseif type(obj) == "table" and not coerceable(obj) then
-			if pairs(obj)(obj) == nil then
-				return '{}' -- Always print empty tables.
-			end
-			if depth > max_depth then
-				return tostring(obj)
-			end
-
 			local str = "{"
-			depth = depth + 1
-
 			for k, v in pairs(obj) do
-				local pair = pretty(k, 0).." = "..recurse(v)
+				local pair = pretty(k).." = "..recurse(v)
 				str = str..(str == "{" and pair or ", "..pair)
 			end
-
-			depth = depth - 1
 			return str.."}"
 		else
 			-- tostring() can fail if there is an error in a __tostring metamethod.
@@ -126,14 +112,8 @@ local function dbg_writeln(str, ...)
 	dbg.write((str or "").."\n", ...)
 end
 
-local cwd = '^' .. os.getenv('PWD') .. '/'
-local home = '^' .. os.getenv('HOME') .. '/'
 local function format_stack_frame_info(info)
-	local path = info.source:sub(2)
-	path = path:gsub(cwd, './'):gsub(home, '~/')
-	if #path > 50 then
-		path = '...' .. path:sub(-47)
-	end
+	local path = info.source
 	local fname = (info.name or string.format("<%s:%d>", path, info.linedefined))
 	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", path, info.currentline, fname)
 end
@@ -196,26 +176,6 @@ local function local_bind(offset, name, value)
 	until var == nil end
 
 	dbg.writeln(COLOR_RED.."Error: "..COLOR_RESET.."Unknown local variable: "..name)
-end
-
-local function istring(str, sep)
-  local sep = sep or "\n"
-  local pattern = string.format("(.-)(%s)", sep)
-
-  local ipos, iidx = 1, 0
-  return function()
-    iidx = iidx + 1
-
-    local spos, epos, capture = string.find(str, pattern, ipos)
-    if spos then
-      ipos = epos + 1
-      return iidx, capture
-    elseif ipos <= #str then
-      capture = string.sub(str, ipos)
-      ipos = #str + 1
-      return iidx, capture
-    end
-  end
 end
 
 -- Create a table of all the locally accessible variables.
@@ -395,6 +355,27 @@ local function cmd_down()
 	return false
 end
 
+-- TODO what does this do exactly?
+local function istring(str, sep)
+	local sep = sep or "\n"
+	local pattern = string.format("(.-)(%s)", sep)
+	
+	local ipos, iidx = 1, 0
+	return function()
+		iidx = iidx + 1
+		
+		local spos, epos, capture = str:find(pattern, ipos)
+		if spos then
+			ipos = epos + 1
+			return iidx, capture
+		elseif ipos <= #str then
+			capture = str:sub(ipos)
+			ipos = #str + 1
+			return iidx, capture
+		end
+	end
+end
+
 local function cmd_where(line_num)
 	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 	if not info then return end
@@ -402,7 +383,7 @@ local function cmd_where(line_num)
 	local source = info.source
 	local source_lidx = info.currentline
 
-	local source_filename = string.match(source, "^@(.*)$")
+	local source_filename = source:match("^@(.*)$")
 	if source_filename then
 		if source_contents[source_filename] then
 			source = source_contents[source_filename]
@@ -439,7 +420,7 @@ local function cmd_trace()
 	-- Iterate the lines of the stack trace so we can highlight the current one.
 	local line_num = -2
 	while str and #str ~= 0 do
-		local line, rest = string.match(str, "([^\n]*)\n?(.*)")
+		local line, rest = str:match("([^\n]*)\n?(.*)")
 		str = rest
 		
 		if line_num >= 0 then line = tostring(line_num)..line end
@@ -490,7 +471,7 @@ local function match_command(line)
 	}
 	
 	for cmd, cmd_func in pairs(commands) do
-		local matches = {string.match(line, "^("..cmd..")$")}
+		local matches = {line:match("^("..cmd..")$")}
 		if matches[1] then
 			return cmd_func, select(2, unpack(matches))
 		end
@@ -702,7 +683,7 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 				local cstr = readline.readline(prompt)
 				if cstr ~= nil then
 					local str = ffi.string(cstr)
-					if string.match(str, "[^%s]+") then
+					if str:match("[^%s]+") then
 						readline.add_history(cstr)
 					end
 
