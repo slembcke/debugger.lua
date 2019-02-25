@@ -152,36 +152,6 @@ local hook_step = hook_factory(1)
 local hook_next = hook_factory(0)
 local hook_finish = hook_factory(-1)
 
-local function local_bind(_, name, value)
-	local FUNC_STACK_OFFSET = 4
-	local level = stack_offset + FUNC_STACK_OFFSET + LOCAL_STACK_LEVEL
-
-	-- Set a local.
-	do local i = 1; repeat
-		local var = debug.getlocal(level, i)
-		if name == var then
-			dbg.writeln("local "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
-			return debug.setlocal(level, i, value)
-		end
-		i = i + 1
-	until var == nil end
-
-	-- Set an upvalue.
-	local func = debug.getinfo(level).func
-	do local i = 1; repeat
-		local var = debug.getupvalue(func, i)
-		if name == var then
-			dbg.writeln("upvalue "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
-			return debug.setupvalue(func, i, value)
-		end
-		i = i + 1
-	until var == nil end
-
-	-- Set a global.
-	dbg.writeln("global "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
-	_G[name] = value
-end
-
 -- Create a table of all the locally accessible variables.
 -- Globals are not included when running the locals command, but are when running the print command.
 local function local_bindings(offset, include_globals)
@@ -224,6 +194,37 @@ local function local_bindings(offset, include_globals)
 		return bindings
 	end
 end --189
+
+-- Used as a __newindex metamethod to modify variables in cmd_eval().
+local function mutate_bindings(_, name, value)
+	local FUNC_STACK_OFFSET = 3
+	local level = stack_offset + FUNC_STACK_OFFSET + LOCAL_STACK_LEVEL
+
+	-- Set a local.
+	do local i = 1; repeat
+		local var = debug.getlocal(level, i)
+		if name == var then
+			dbg.writeln("local "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
+			return debug.setlocal(level, i, value)
+		end
+		i = i + 1
+	until var == nil end
+
+	-- Set an upvalue.
+	local func = debug.getinfo(level).func
+	do local i = 1; repeat
+		local var = debug.getupvalue(func, i)
+		if name == var then
+			dbg.writeln("upvalue "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
+			return debug.setupvalue(func, i, value)
+		end
+		i = i + 1
+	until var == nil end
+	
+	-- Set a global.
+	dbg.writeln("global "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
+	_G[name] = value
+end
 
 -- Compile an expression with the given variable bindings.
 local function compile_chunk(block, env)
@@ -294,19 +295,17 @@ local function cmd_print(expr)
 end
 
 local function cmd_eval(code)
-	local index = local_bindings(1, true)
-	local env = setmetatable({}, {
-		__index = index,
-		__newindex = function(env, name, value)
-			local_bind(4, name, value)
-		end
+	local env = local_bindings(1, true)
+	local mutable_env = setmetatable({}, {
+		__index = env,
+		__newindex = mutate_bindings,
 	})
 
-	local chunk = compile_chunk(code, env)
+	local chunk = compile_chunk(code, mutable_env)
 	if chunk == nil then return false end
 
 	-- Call the chunk and collect the results.
-	local success, err = pcall(chunk, unpack(rawget(index, "...") or {}))
+	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
 	if not success then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
 	end
