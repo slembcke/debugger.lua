@@ -152,29 +152,34 @@ local hook_step = hook_factory(1)
 local hook_next = hook_factory(0)
 local hook_finish = hook_factory(-1)
 
-local function local_bind(offset, name, value)
-	local level = stack_offset + offset + LOCAL_STACK_LEVEL
+local function local_bind(_, name, value)
+	local FUNC_STACK_OFFSET = 4
+	local level = stack_offset + FUNC_STACK_OFFSET + LOCAL_STACK_LEVEL
 
-	-- Mutating a local?
+	-- Set a local.
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
 		if name == var then
+			dbg.writeln("local "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
 			return debug.setlocal(level, i, value)
 		end
 		i = i + 1
 	until var == nil end
 
-	-- Mutating an upvalue?
+	-- Set an upvalue.
 	local func = debug.getinfo(level).func
 	do local i = 1; repeat
 		local var = debug.getupvalue(func, i)
 		if name == var then
+			dbg.writeln("upvalue "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
 			return debug.setupvalue(func, i, value)
 		end
 		i = i + 1
 	until var == nil end
 
-	dbg.writeln(COLOR_RED.."Error: "..COLOR_RESET.."Unknown local variable: "..name)
+	-- Set a global.
+	dbg.writeln("global "..COLOR_BLUE..name..COLOR_RED.." = "..COLOR_RESET..value)
+	_G[name] = value
 end
 
 -- Create a table of all the locally accessible variables.
@@ -302,15 +307,7 @@ local function cmd_eval(code)
 
 	-- Call the chunk and collect the results.
 	local success, err = pcall(chunk, unpack(rawget(index, "...") or {}))
-	if success then
-		-- Look for assigned variable names.
-		local names = code:match("^([^{=]+)%s?=[^=]")
-		if names then
-			stack_offset = stack_offset + 1
-			cmd_print(names)
-			stack_offset = stack_offset - 1
-		end
-	else
+	if not success then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
 	end
 end
