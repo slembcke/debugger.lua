@@ -608,94 +608,13 @@ else
 	dbg.writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
 end
 
--- Assume stdin/out are TTYs unless we can use LuaJIT's FFI to properly check them.
-local stdin_isatty = true
-local stdout_isatty = true
-
--- Conditionally enable the LuaJIT FFI.
-local ffi = (jit and require("ffi"))
-if ffi then
-	ffi.cdef[[
-		bool isatty(int);
-		void free(void *ptr);
-		
-		char *readline(const char *);
-		int add_history(const char *);
-	]]
-	
-	stdin_isatty = ffi.C.isatty(0)
-	stdout_isatty = ffi.C.isatty(1)
-end
-
 -- Conditionally enable color support.
-local color_maybe_supported = (stdout_isatty and os.getenv("TERM") and os.getenv("TERM") ~= "dumb")
+local color_maybe_supported = (os.getenv("TERM") and os.getenv("TERM") ~= "dumb")
 if color_maybe_supported and not os.getenv("DBG_NOCOLOR") then
 	COLOR_RED = string.char(27) .. "[31m"
 	COLOR_BLUE = string.char(27) .. "[34m"
 	COLOR_GRAY = string.char(27) .. "[38;5;59m"
 	COLOR_RESET = string.char(27) .. "[0m"
-end
-
-if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
-	pcall(function()
-		local linenoise = require 'linenoise'
-
-		-- Load command history from ~/.lua_history
-		local hist_path = os.getenv('HOME') .. '/.lua_history'
-		linenoise.historyload(hist_path)
-		linenoise.historysetmaxlen(50)
-
-		local function autocomplete(env, input, matches)
-			for name, _ in pairs(env) do
-				if name:match('^' .. input .. '.*') then
-					linenoise.addcompletion(matches, name)
-				end
-			end
-		end
-
-		-- Auto-completion for locals and globals
-		linenoise.setcompletion(function(matches, input)
-			-- First, check the locals and upvalues.
-			local env = local_bindings(1, true)
-			autocomplete(env, input, matches)
-
-			-- Then, check the implicit environment.
-			env = getmetatable(env).__index
-			autocomplete(env, input, matches)
-		end)
-
-		dbg.read = function(prompt)
-			local str = linenoise.linenoise(prompt)
-			if str and not str:match "^%s*$" then
-				linenoise.historyadd(str)
-				linenoise.historysave(hist_path)
-			end
-			return str
-		end
-		dbg.writeln(COLOR_RED.."debugger.lua: Linenoise support enabled."..COLOR_RESET)
-	end)
-
-	-- Conditionally enable LuaJIT readline support.
-	pcall(function()
-		if dbg.read == nil and ffi then
-			local readline = ffi.load("readline")
-			dbg.read = function(prompt)
-				local cstr = readline.readline(prompt)
-				if cstr ~= nil then
-					local str = ffi.string(cstr)
-					if str:match("[^%s]+") then
-						readline.add_history(cstr)
-					end
-
-					ffi.C.free(cstr)
-					return str
-				else
-					return nil
-				end
-			end
-			dbg.writeln(COLOR_RED.."debugger.lua: Readline support enabled."..COLOR_RESET)
-		end
-	end)
 end
 
 return dbg
