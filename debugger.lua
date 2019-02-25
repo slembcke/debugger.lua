@@ -29,7 +29,6 @@
 -- Use ANSI color codes in the prompt by default.
 local COLOR_RED = ""
 local COLOR_BLUE = ""
-local COLOR_GRAY = ""
 local COLOR_RESET = ""
 
 local function pretty(obj)
@@ -281,7 +280,7 @@ local function cmd_print(expr)
 			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
 		end
 		if output == "" then
-			output = COLOR_GRAY.."<no result>"
+			output = "<no result>"
 		end
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
 	end
@@ -613,7 +612,6 @@ local color_maybe_supported = (os.getenv("TERM") and os.getenv("TERM") ~= "dumb"
 if color_maybe_supported and not os.getenv("DBG_NOCOLOR") then
 	COLOR_RED = string.char(27) .. "[31m"
 	COLOR_BLUE = string.char(27) .. "[34m"
-	COLOR_GRAY = string.char(27) .. "[38;5;59m"
 	COLOR_RESET = string.char(27) .. "[0m"
 end
 
