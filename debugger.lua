@@ -458,7 +458,8 @@ end
 
 repl = function()
 	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
-	if dbg.auto_where then pcall(run_command, "w "..tonumber(dbg.auto_where), false) end
+	local auto_where = tonumber(dbg.auto_where)
+	if auto_where then pcall(run_command, "w "..auto_where, false) end
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET), true)
