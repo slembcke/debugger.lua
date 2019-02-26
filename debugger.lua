@@ -369,6 +369,8 @@ local function cmd_where(context_lines)
 	else
 		debug.writeln(COLOR_RED.."Error: Source not found.");
 	end
+	
+	return false
 end
 
 local function cmd_trace()
@@ -419,7 +421,7 @@ local function match_command(line)
 		["e (.*)"] = cmd_eval,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
-		["w%s?(%d*)"] = cmd_where,
+		["w ?(%d*)"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
@@ -445,34 +447,21 @@ end
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
-	-- Continue without caching the command if you hit control-d.
-	if line == nil then
-		dbg.writeln()
-		return true
-	end
+	-- No command, same as continue.
+	if line == nil then return true end
 
 	-- Re-execute the last command if you press return.
-	if line == "" then
-		line = last_cmd or "h"
-	end
+	if line == "" then line = last_cmd or "h" end
 
 	local command, command_arg = match_command(line)
 	if command then
-		-- Some commands are not worth repeating.
-		if not line:match("^[hlt]$") then
-			last_cmd = line
-		end
-		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
+		last_cmd = line
+	-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	end
 
-	if #line == 1 then
-		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
-		return false
-	end
-
-	-- Evaluate the chunk appropriately.
-	if is_expression(line) then cmd_print(line) else cmd_eval(line) end
+	dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
+	return false
 end
 
 repl = function()
