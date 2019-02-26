@@ -158,34 +158,33 @@ local function local_bindings(offset, include_globals)
 	local level = stack_offset + offset + LOCAL_STACK_LEVEL
 	local func = debug.getinfo(level).func
 	local bindings = {}
-	local i
-
+	
 	-- Retrieve the upvalues
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getupvalue(func, i)
 		if not name then break end
 		bindings[name] = value
 		i = i + 1
-	end
-
+	end end
+	
 	-- Retrieve the locals (overwriting any upvalues)
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getlocal(level, i)
 		if not name then break end
 		bindings[name] = value
 		i = i + 1
-	end
-
+	end end
+	
 	-- Retrieve the varargs (works in Lua 5.2 and LuaJIT)
 	local varargs = {}
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getlocal(level, -i)
 		if not name then break end
 		varargs[i] = value
 		i = i + 1
-	end
-	if i > 1 then bindings["..."] = varargs end
-
+	end end
+	if #varargs > 0 then bindings["..."] = varargs end
+	
 	if include_globals then
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
@@ -282,7 +281,6 @@ local function cmd_print(expr)
 		for i = 2, #results do
 			output = output..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
-		
 		if output == "" then output = "<no result>" end
 		
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
