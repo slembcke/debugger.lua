@@ -511,6 +511,7 @@ dbg.read = dbg_read
 dbg.write = dbg_write
 dbg.writeln = dbg_writeln
 dbg.pretty = pretty
+dbg.pp = function(...) dbg.writeln(pretty(...)) end
 
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
