@@ -347,49 +347,29 @@ local function cmd_down()
 	return false
 end
 
--- Like ipairs() but for lines in a string
-function ilines(str)
-	local i = 0
-	local lines = str:gmatch("(.-)\n")
+local function cmd_where(context_lines)
+	context_lines = tonumber(context_lines) or 5
 	
-	return function()
-		i = i + 1
-		local line = lines()
-		if line then return i, line else return nil end
-	end
-end
-
-local function cmd_where(line_num)
 	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
 	if not info then return end
-
-	local source = info.source
-
-	local source_filename = source:match("^@(.*)$")
-	if source_filename then
-		if source_cache[source_filename] then
-			source = source_cache[source_filename]
-		else
-			local source_file = io.open(source_filename, "r")
-			if not source_file then source = nil
-			else source = source_file:read("*a"); source_file:close() end
-
-			source_cache[source_filename] = source
-		end
-	end
-
+	
+	local filename = info.source:match("@(.*)")
+	local source = source_cache[filename]
+	
 	if not source then
-		dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
-	else
-		local line_num = tonumber(line_num) or 5
-		local line_min, line_max = info.currentline - line_num, info.currentline + line_num
-
-		for lidx, source_line in ilines(source, "\n") do
-			if lidx >= line_min and lidx <= line_max then
-				dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s",
-				tonumber(lidx), (lidx == info.currentline and " => " or "    "), source_line)
-			end
+		source = {}
+		for line in io.lines(filename) do table.insert(source, line) end
+		source_cache[filename] = source
+	end
+	
+	if source[info.currentline] then
+		for i = info.currentline - context_lines, info.currentline + context_lines do
+			local caret = (i == info.currentline and " => " or "    ")
+			local line = source[i]
+			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
 		end
+	else
+		debug.writeln(COLOR_RED.."Error: Source not found.");
 	end
 end
 
