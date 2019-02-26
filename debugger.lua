@@ -351,7 +351,7 @@ local function cmd_where(context_lines)
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 	if not info then return end
 	
-	local filename = info.source:match("@(.*)")
+	local filename = info.source:match("@(.*)") or "<unknown filename>"
 	local source = source_cache[filename]
 	
 	if not source then
@@ -400,8 +400,8 @@ local function cmd_locals()
 	for _, k in ipairs(keys) do
 		local v = bindings[k]
 		
-		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
-		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
+		-- Skip the debugger object itself, "(*internal)" values, and Lua 5.2's _ENV object.
+		if not rawequal(v, dbg) and k ~= "_ENV" and not k:match("%(.*%)") then
 			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
@@ -466,8 +466,7 @@ end
 
 repl = function()
 	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
-	
-	pcall(run_command, "w 1", false)
+	-- pcall(run_command, "w 1", false)
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET), true)
