@@ -466,7 +466,7 @@ end
 
 repl = function()
 	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
-	-- pcall(run_command, "w 1", false)
+	if dbg.auto_where then pcall(run_command, "w "..tonumber(dbg.auto_where), false) end
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET), true)
@@ -544,6 +544,9 @@ function dbg.msgh(...)
 	
 	return ...
 end
+
+-- Default auto_where to false
+dbg.auto_where = false
 
 -- Detect Lua version.
 if jit then -- LuaJIT
