@@ -77,15 +77,15 @@ q(uit) - halt execution]]
 
 -- The stack level that cmd_* functions use to access locals or info
 -- The structure of the code very carefully ensures this.
-local LOCAL_STACK_LEVEL = 6
+local CMD_STACK_LEVEL = 6
 
--- Extra stack frames to chop off.
--- Used for things like dbgcall() or the overridden assert/error functions
+-- Location of the top of the stack outside of the debugger.
+-- Adjusted by some debugger entrypoints.
 local stack_top = 0
 
 -- The current stack frame index.
 -- Changed using the up/down commands
-local stack_offset = 0
+local stack_inspect_offset = 0
 
 local source_cache = {}
 
@@ -155,7 +155,7 @@ local hook_finish = hook_factory(-1)
 -- Create a table of all the locally accessible variables.
 -- Globals are not included when running the locals command, but are when running the print command.
 local function local_bindings(offset, include_globals)
-	local level = stack_offset + offset + LOCAL_STACK_LEVEL
+	local level = offset + stack_inspect_offset + CMD_STACK_LEVEL
 	local func = debug.getinfo(level).func
 	local bindings = {}
 	
@@ -196,8 +196,8 @@ end --189
 
 -- Used as a __newindex metamethod to modify variables in cmd_eval().
 local function mutate_bindings(_, name, value)
-	local FUNC_STACK_OFFSET = 3
-	local level = stack_offset + FUNC_STACK_OFFSET + LOCAL_STACK_LEVEL
+	local FUNC_STACK_OFFSET = 3 -- Stack depth of this function.
+	local level = stack_inspect_offset + FUNC_STACK_OFFSET + CMD_STACK_LEVEL
 
 	-- Set a local.
 	do local i = 1; repeat
@@ -250,18 +250,18 @@ end
 local unpack = unpack or table.unpack
 
 function cmd_step()
-	stack_offset = stack_top
+	stack_inspect_offset = stack_top
 	return true, hook_step
 end
 
 function cmd_next()
-	stack_offset = stack_top
+	stack_inspect_offset = stack_top
 	return true, hook_next
 end
 
 function cmd_finish()
-	local offset = stack_top - stack_offset
-	stack_offset = stack_top
+	local offset = stack_top - stack_inspect_offset
+	stack_inspect_offset = stack_top
 	return true, offset < 0 and hook_factory(offset - 1) or hook_finish
 end
 
@@ -307,17 +307,17 @@ local function cmd_eval(code)
 end
 
 local function cmd_up()
-	local offset = stack_offset
+	local offset = stack_inspect_offset
 	local info
 	repeat -- Find the next frame with a file.
 		offset = offset + 1
-		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
+		info = debug.getinfo(offset + CMD_STACK_LEVEL)
 	until not info or frame_has_file(info)
 
 	if info then
-		stack_offset = offset
+		stack_inspect_offset = offset
 	else
-		info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 		dbg.writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
 	end
 
@@ -326,18 +326,18 @@ local function cmd_up()
 end
 
 local function cmd_down()
-	local offset = stack_offset
+	local offset = stack_inspect_offset
 	local info
 	repeat -- Find the next frame with a file.
 		offset = offset - 1
 		if offset < stack_top then info = nil; break end
-		info = debug.getinfo(offset + LOCAL_STACK_LEVEL)
+		info = debug.getinfo(offset + CMD_STACK_LEVEL)
 	until frame_has_file(info)
 
 	if info then
-		stack_offset = offset
+		stack_inspect_offset = offset
 	else
-		info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 		dbg.writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
 
@@ -348,7 +348,7 @@ end
 local function cmd_where(context_lines)
 	context_lines = tonumber(context_lines) or 5
 	
-	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
+	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 	if not info then return end
 	
 	local filename = info.source:match("@(.*)")
@@ -372,15 +372,15 @@ local function cmd_where(context_lines)
 end
 
 local function cmd_trace()
-	local location = format_stack_frame_info(debug.getinfo(stack_offset + LOCAL_STACK_LEVEL))
-	local message = string.format("Inspecting frame: %d - (%s)", stack_offset - stack_top, location)
-	local str = debug.traceback(message, stack_top + LOCAL_STACK_LEVEL)
+	local location = format_stack_frame_info(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL))
+	local message = string.format("Inspecting frame: %d - (%s)", stack_inspect_offset - stack_top, location)
+	local str = debug.traceback(message, stack_top + CMD_STACK_LEVEL)
 	
 	-- Iterate the lines of the stack trace so we can number/highlight them.
 	local i = -2
 	for line in str:gmatch("([^\n]+)\n?") do
 		if i >= 0 then line = tostring(i)..line end
-		dbg.writeln((i + stack_top == stack_offset) and COLOR_BLUE..line..COLOR_RESET or line)
+		dbg.writeln((i + stack_top == stack_inspect_offset) and COLOR_BLUE..line..COLOR_RESET or line)
 		i = i + 1
 	end
 	
@@ -476,7 +476,7 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg.writeln(format_stack_frame_info(debug.getinfo(LOCAL_STACK_LEVEL - 3 + stack_top)))
+	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET))
@@ -492,12 +492,12 @@ end
 
 -- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
-	__call = function(self, condition, offset)
+	__call = function(self, condition, top_offset)
 		if condition then return end
 		
-		offset = (offset or 0)
-		stack_offset = offset
-		stack_top = offset
+		top_offset = (top_offset or 0)
+		stack_inspect_offset = top_offset
+		stack_top = top_offset
 		
 		debug.sethook(hook_next(1), "crl")
 		return
