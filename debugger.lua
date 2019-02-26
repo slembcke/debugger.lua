@@ -87,8 +87,6 @@ local stack_top = 0
 -- Changed using the up/down commands
 local stack_inspect_offset = 0
 
-local source_cache = {}
-
 local dbg
 
 -- Default dbg.read function
@@ -345,6 +343,8 @@ local function cmd_down()
 	return false
 end
 
+local source_cache = {}
+
 local function cmd_where(context_lines)
 	context_lines = tonumber(context_lines) or 5
 	
@@ -356,7 +356,7 @@ local function cmd_where(context_lines)
 	
 	if not source then
 		source = {}
-		for line in io.lines(filename) do table.insert(source, line) end
+		pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
 		source_cache[filename] = source
 	end
 	
@@ -367,7 +367,7 @@ local function cmd_where(context_lines)
 			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
 		end
 	else
-		debug.writeln(COLOR_RED.."Error: Source not found.");
+		dbg.writeln(COLOR_RED.."Error: '%s' not found.", filename);
 	end
 	
 	return false
@@ -446,7 +446,7 @@ end
 
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
-local function run_command(line)
+local function run_command(line, cache)
 	-- No command, same as continue.
 	if line == nil then return true end
 
@@ -455,7 +455,7 @@ local function run_command(line)
 
 	local command, command_arg = match_command(line)
 	if command then
-		last_cmd = line
+		if cache then last_cmd = line end
 	-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	end
@@ -467,8 +467,10 @@ end
 repl = function()
 	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
 	
+	pcall(run_command, "w 1", false)
+	
 	repeat
-		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET))
+		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET), true)
 		if success then
 			debug.sethook(hook and hook(0), "crl")
 		else
