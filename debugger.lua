@@ -349,7 +349,7 @@ local function cmd_where(context_lines)
 	context_lines = tonumber(context_lines) or 5
 	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-	if not info then return end
+	if not info then return false end
 	
 	local filename = info.source:match("@(.*)") or "<unknown filename>"
 	local source = source_cache[filename]
