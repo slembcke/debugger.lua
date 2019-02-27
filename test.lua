@@ -29,4 +29,14 @@ tests.run_test(tests.finish, function()
 	func3()
 end)
 
+tests.run_test(tests.continue, function()
+	func3()
+	func3()
+	func3()
+end)
+
+tests.run_test(tests.trace, function()
+	func3()
+end)
+
 print("TESTS COMPLETE")
