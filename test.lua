@@ -53,4 +53,23 @@ tests.run_test(tests.where, function()
 	func_from_string()
 end)
 
-tests.print_green("TESTS COMPLETE")
+GLOBAL = false
+local upvar = false
+
+tests.run_test(tests.eval, function()
+	local lvar = false
+	dbg()
+	if not lvar then tests.print_red "ERROR: local variable not set" end
+	
+	-- dbg()
+	-- if not upvar then tests.print_red "ERROR: upvalue not set" end
+	
+	-- dbg()
+	-- if not GLOBAL then tests.print_red "ERROR: global variable not set" end
+	
+	tests.print_green "EVAL TESTS COMPLETE"
+end)
+
+-- e, p, l
+
+tests.print_green "TESTS COMPLETE"

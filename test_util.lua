@@ -196,5 +196,16 @@ function module.where()
 	print_green "WHERE TESTS COMPLETE"
 end
 
+function module.eval()
+	ignore()
+	cmd "e lvar = true"
+	-- Hmm... need to set two commands in a row for this to work.
+	-- cmd "c"
+	
+	ignore()
+	cmd "c"
+end
+
+module.print_red = print_red
 module.print_green = print_green
 return module
