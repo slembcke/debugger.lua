@@ -114,16 +114,16 @@ end
 
 -- Default dbg.write function
 local function dbg_write(str, ...)
-	if select("#", ...) == 0 then
-		io.write(str or "<NULL>")
-	else
-		io.write(string.format(str, ...))
-	end
+	io.write(str)
 end
 
 -- Default dbg.writeln function.
 local function dbg_writeln(str, ...)
-	dbg.write((str or "").."\n", ...)
+	if select("#", ...) == 0 then
+		dbg.write((str or "<NULL>").."\n")
+	else
+		dbg.write(string.format(str.."\n", ...))
+	end
 end
 
 local cwd = '^' .. os.getenv('PWD') .. '/'
@@ -611,7 +611,7 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	dbg.write(...)
+	dbg.write(string.format(...))
 	dbg(false, 1)
 	
 	return ...
