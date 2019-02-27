@@ -9,7 +9,7 @@ end
 
 local function func2()
 	func1()
-	local _ = nil -- padding
+	_ = _ -- nop padding
 end
 
 local function func3()
@@ -39,4 +39,18 @@ tests.run_test(tests.trace, function()
 	func3()
 end)
 
-print("TESTS COMPLETE")
+tests.run_test(tests.updown, function()
+	func3()
+end)
+
+local func_from_string = (loadstring or load)[[
+	require("debugger")()
+	_ = _
+]]
+
+tests.run_test(tests.where, function()
+	func3()
+	func_from_string()
+end)
+
+tests.print_green("TESTS COMPLETE")

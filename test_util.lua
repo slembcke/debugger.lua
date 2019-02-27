@@ -2,6 +2,13 @@
 local getenv = os.getenv
 os.getenv = function(sym) return (sym == "TERM") and "dumb" or getenv(sym) end
 
+-- Do color test output
+COLOR_RED = string.char(27) .. "[31m"
+COLOR_GREEN = string.char(27) .. "[32m"
+COLOR_RESET = string.char(27) .. "[0m"
+local function print_red(str) print(COLOR_RED..str..COLOR_RESET) end
+local function print_green(str) print(COLOR_GREEN..str..COLOR_RESET) end
+
 local dbg = require("debugger");
 local dbg_read = dbg.read
 local dbg_write = dbg.write
@@ -21,7 +28,7 @@ local command_string
 local function cmd(str) command_string = str end
 
 dbg.read = function(prompt)
-	lua_assert(command_string, "Command not set!")
+	lua_assert(command_string, COLOR_RED.."Command not set!"..COLOR_RESET)
 	
 	local str = command_string
 	command_string = nil
@@ -31,7 +38,7 @@ dbg.read = function(prompt)
 end
 
 local function sanity_write(str)
-	print "ERROR: dbg.write caled unexpectedly?!"
+	print_red "ERROR: dbg.write caled unexpectedly?!"
 	if LOG_IO then print(str) end
 end
 
@@ -39,17 +46,19 @@ local function expect(str, cmd)
 	local str2 = coroutine.yield():strip()
 	if LOG_IO then print(str2) end
 	if str ~= str2 then
-		print("FAILURE")
+		print_red("FAILURE (expect)")
 		print("expected: "..str)
 		print("got     : "..str2)
 	end
 end
 
 local function expect_match(pattern, cmd)
+	pattern = "^"..pattern.."$"
+	
 	local str = coroutine.yield():strip()
 	if LOG_IO then print(str2) end
 	if not str:match(pattern) then
-		print("FAILURE (match)")
+		print_red("FAILURE (expect_match)")
 		print("expected: "..pattern)
 		print("got     : "..str)
 	end
@@ -65,7 +74,7 @@ local function ignore()
 	if LOG_IO then print(str) end
 end
 
-function module.repl(test_body)
+function module.repl(_, test_body)
 	dbg.read = dbg_read
 	dbg.write = dbg_write
 	test_body()
@@ -80,7 +89,7 @@ function module.run_test(test, test_body)
 	dbg.write = sanity_write
 	
 	if coroutine.status(coro) ~= "dead" then
-		print("FAILURE: test coroutine not complete")
+		print_red("FAILURE: test coroutine not complete")
 	end
 end
 
@@ -92,7 +101,7 @@ function module.step()
 	expect "test.lua:4 in 'do_nothing'"; cmd "s"
 	expect "test.lua:18 in 'func3'"; cmd "s"
 	expect "test.lua:22 in 'test_body'"; cmd "c"
-	print "STEP TESTS COMPLETE"
+	print_green "STEP TESTS COMPLETE"
 end
 
 function module.next()
@@ -102,7 +111,7 @@ function module.next()
 	expect "test.lua:17 in 'func3'"; cmd "n"
 	expect "test.lua:18 in 'func3'"; cmd "n"
 	expect "test.lua:26 in 'test_body'"; cmd "c"
-	print "NEXT TESTS COMPLETE"
+	print_green "NEXT TESTS COMPLETE"
 end
 
 function module.finish()
@@ -110,14 +119,14 @@ function module.finish()
 	expect "test.lua:12 in 'func2'"; cmd "f"
 	expect "test.lua:17 in 'func3'"; cmd "f"
 	expect "test.lua:30 in 'test_body'"; cmd "c"
-	print "FINISH TESTS COMPLETE"
+	print_green "FINISH TESTS COMPLETE"
 end
 
 function module.continue()
 	expect "test.lua:8 in 'func1'"; cmd "c"
 	expect "test.lua:8 in 'func1'"; cmd "c"
 	expect "test.lua:8 in 'func1'"; cmd "c"
-	print "CONTINUE TESTS COMPLETE"
+	print_green "CONTINUE TESTS COMPLETE"
 end
 
 function module.trace()
@@ -133,7 +142,59 @@ function module.trace()
 	expect_match "4\t./test_util%.lua:%d+: in function '.*run_test'"
 	expect "5\ttest.lua:38: in main chunk"
 	expect_match "6\t%[C%]:.*"
+	
 	cmd "c"
+	print_green "TRACE TESTS COMPLETE"
 end
 
+function module.updown()
+	ignore();
+	
+	cmd "d"
+	expect "Already at the bottom of the stack."
+	expect "Inspecting frame: test.lua:8 in 'func1'"
+	
+	cmd "u"
+	expect "Inspecting frame: test.lua:11 in 'func2'"
+	
+	cmd "u"
+	expect "Inspecting frame: test.lua:16 in 'func3'"
+	
+	cmd "u"
+	expect "Inspecting frame: test.lua:43 in 'test_body'"
+	
+	cmd "u"
+	expect_match "Inspecting frame: %./test_util%.lua:%d+ in 'run_test'"
+	
+	cmd "u"
+	expect "Inspecting frame: test.lua:42 in '<test.lua:0>'"
+	
+	cmd "u"
+	expect "Already at the top of the stack."
+	expect "Inspecting frame: test.lua:42 in '<test.lua:0>'"
+	
+	cmd "c"
+	print_green "UP/DOWN TESTES COMPLETE"
+end
+
+function module.where()
+	ignore()
+	
+	cmd "w 1"
+	expect_match "7%s+dbg%(%)"
+	expect_match "8%s+=> end"
+	expect "9"
+	
+	cmd "c"
+	ignore()
+	
+	cmd "w"
+	expect_match "1%s+require%(\"debugger\"%)%(%)"
+	expect_match "2%s+=>%s+_ = _"
+	
+	cmd "c"
+	print_green "WHERE TESTS COMPLETE"
+end
+
+module.print_green = print_green
 return module
