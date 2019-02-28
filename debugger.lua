@@ -583,8 +583,8 @@ else
 end
 
 -- Assume stdin/out are TTYs unless we can use LuaJIT's FFI to properly check them.
-local stdin_isatty = 1
-local stdout_isatty = 1
+local stdin_isatty = true
+local stdout_isatty = true
 
 -- Conditionally enable the LuaJIT FFI.
 local ffi = (jit and require("ffi"))
