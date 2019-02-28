@@ -25,6 +25,7 @@
 	* Do coroutines work as expected?
 ]]
 
+local dbg
 
 -- Use ANSI color codes in the prompt by default.
 local COLOR_RED = ""
@@ -32,36 +33,26 @@ local COLOR_BLUE = ""
 local COLOR_RESET = ""
 
 local function pretty(obj, max_depth)
-	if max_depth == nil then max_depth = 1 end
+	if max_depth == nil then max_depth = dbg.pretty_depth end
 	
 	-- Returns true if a table has a __tostring metamethod.
 	local function coerceable(tbl)
 		local meta = getmetatable(tbl)
 		return (meta and meta.__tostring)
 	end
-
-	local depth = 1
-	local function recurse(obj)
+	
+	local function recurse(obj, depth)
 		if type(obj) == "string" then
 			-- Dump the string so that escape sequences are printed.
 			return string.format("%q", obj)
-		elseif type(obj) == "table" and not coerceable(obj) then
-			if pairs(obj)(obj) == nil then
-				return '{}' -- Always print empty tables.
-			end
-			if depth > max_depth then
-				return tostring(obj)
-			end
-			
+		elseif type(obj) == "table" and depth < max_depth and not coerceable(obj) then
 			local str = "{"
-			depth = depth + 1
 			
 			for k, v in pairs(obj) do
-				local pair = pretty(k, 0).." = "..recurse(v)
+				local pair = pretty(k, 0).." = "..recurse(v, depth + 1)
 				str = str..(str == "{" and pair or ", "..pair)
 			end
 			
-			depth = depth - 1
 			return str.."}"
 		else
 			-- tostring() can fail if there is an error in a __tostring metamethod.
@@ -69,8 +60,8 @@ local function pretty(obj, max_depth)
 			return (success and value or "<!!error in __tostring metamethod!!>")
 		end
 	end
-
-	return recurse(obj)
+	
+	return recurse(obj, 0)
 end
 
 local help_message = [[
@@ -101,8 +92,6 @@ local stack_top = 0
 -- Changed using the up/down commands
 local stack_inspect_offset = 0
 
-local dbg
-
 -- Default dbg.read function
 local function dbg_read(prompt)
 	dbg.write(prompt)
@@ -110,7 +99,7 @@ local function dbg_read(prompt)
 end
 
 -- Default dbg.write function
-local function dbg_write(str, ...)
+local function dbg_write(str)
 	io.write(str)
 end
 
@@ -290,7 +279,7 @@ local function cmd_print(expr)
 	else
 		local output = ""
 		for i = 2, results.n do
-			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
+			output = output..(i ~= 2 and ", " or "")..pretty(results[i])
 		end
 		
 		if output == "" then output = "<no result>" end
@@ -518,7 +507,9 @@ dbg = setmetatable({}, {
 dbg.read = dbg_read
 dbg.write = dbg_write
 dbg.writeln = dbg_writeln
+dbg.pretty_depth = 3
 dbg.pretty = pretty
+dbg.pp = function(value, depth) dbg.writeln(pretty(value, depth)) end
 
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
