@@ -226,9 +226,9 @@ function module.print()
 	cmd "p nil, nil, nil, false"; expect "nil, nil, nil, false => nil, nil, nil, false"
 	
 	cmd "p nil"; expect "nil => nil"
-	cmd "p nil, false"; expect "nil, false => nil, false"
-	cmd "p nil, nil, false"; expect "nil, nil, false => nil, nil, false"
-	cmd "p nil, nil, nil, false"; expect "nil, nil, nil, false => nil, nil, nil, false"
+	cmd "p false, nil"; expect "false, nil => false, nil"
+	cmd "p false, nil, nil"; expect "false, nil, nil => false, nil, nil"
+	cmd "p false, nil, nil, nil"; expect "false, nil, nil, nil => false, nil, nil, nil"
 	
 	CIRCULAR_REF = {}
 	CIRCULAR_REF.ref = CIRCULAR_REF

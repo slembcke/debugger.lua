@@ -29,7 +29,6 @@
 -- Use ANSI color codes in the prompt by default.
 local COLOR_RED = ""
 local COLOR_BLUE = ""
-local COLOR_GRAY = ""
 local COLOR_RESET = ""
 
 local function pretty(obj, max_depth)
@@ -265,9 +264,7 @@ end
 
 -- Wee version differences
 local unpack = unpack or table.unpack
-local pack = table.pack or function(...)
-	return {n = select("#", ...), ...}
-end
+local pack = function(...) return {n = select("#", ...), ...} end
 
 function cmd_step()
 	stack_inspect_offset = stack_top
@@ -301,9 +298,8 @@ local function cmd_print(expr)
 		for i = 2, results.n do
 			output = output..(i ~= 2 and ", " or "")..pretty(results[i], 3)
 		end
-		if output == "" then
-			output = COLOR_GRAY.."<no result>"
-		end
+		
+		if output == "" then output = "<no result>" end
 		dbg.writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
 	end
 	
