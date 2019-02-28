@@ -245,6 +245,37 @@ local function compile_chunk(block, env)
 	end
 end
 
+local SOURCE_CACHE = {["<unknown filename>"] = {}}
+
+function where(info, context_lines)
+	local key = info.source or "<unknown filename>"
+	local source = SOURCE_CACHE[key]
+	
+	if not source then
+		source = {}
+		local filename = info.source:match("@(.*)")
+		if filename then
+			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
+		else
+			for line in info.source:gmatch("(.-)\n") do table.insert(source, line) end
+		end
+		
+		SOURCE_CACHE[key] = source
+	end
+	
+	if source[info.currentline] then
+		for i = info.currentline - context_lines, info.currentline + context_lines do
+			local caret = (i == info.currentline and " => " or "    ")
+			local line = source[i]
+			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
+		end
+	else
+		dbg.writeln(COLOR_RED.."Error: '%s' not found.", filename);
+	end
+	
+	return false
+end
+
 -- Wee version differences
 local unpack = unpack or table.unpack
 local pack = function(...) return {n = select("#", ...), ...} end
@@ -304,11 +335,14 @@ local function cmd_eval(code)
 	if not success then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
 	end
+	
+	return false
 end
 
 local function cmd_up()
 	local offset = stack_inspect_offset
 	local info
+	
 	repeat -- Find the next frame with a file.
 		offset = offset + 1
 		info = debug.getinfo(offset + CMD_STACK_LEVEL)
@@ -322,12 +356,15 @@ local function cmd_up()
 	end
 	
 	dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
+	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
+	
 	return false
 end
 
 local function cmd_down()
 	local offset = stack_inspect_offset
 	local info
+	
 	repeat -- Find the next frame with a file.
 		offset = offset - 1
 		if offset < stack_top then info = nil; break end
@@ -342,43 +379,14 @@ local function cmd_down()
 	end
 	
 	dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
+	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
+	
 	return false
 end
 
-local SOURCE_CACHE = {["<unknown filename>"] = {}}
-
 local function cmd_where(context_lines)
-	context_lines = tonumber(context_lines) or 5
-	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-	if not info then return false end
-	
-	local key = info.source or "<unknown filename>"
-	local source = SOURCE_CACHE[key]
-	
-	if not source then
-		source = {}
-		local filename = info.source:match("@(.*)")
-		if filename then
-			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
-		else
-			for line in info.source:gmatch("(.-)\n") do table.insert(source, line) end
-		end
-		
-		SOURCE_CACHE[key] = source
-	end
-	
-	if source[info.currentline] then
-		for i = info.currentline - context_lines, info.currentline + context_lines do
-			local caret = (i == info.currentline and " => " or "    ")
-			local line = source[i]
-			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
-		end
-	else
-		dbg.writeln(COLOR_RED.."Error: '%s' not found.", filename);
-	end
-	
-	return false
+	return (info and where(info, tonumber(context_lines) or 5))
 end
 
 local function cmd_trace()
@@ -461,6 +469,7 @@ local function run_command(line)
 	
 	local command, command_arg = match_command(line)
 	if command then
+		last_cmd = line
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	end
@@ -475,7 +484,10 @@ local function run_command(line)
 end
 
 repl = function()
-	dbg.writeln(format_stack_frame_info(debug.getinfo(CMD_STACK_LEVEL - 3 + stack_top)))
+	local info = debug.getinfo(stack_top + CMD_STACK_LEVEL - 3)
+	dbg.writeln(format_stack_frame_info(info))
+	
+	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	
 	repeat
 		local success, done, hook = pcall(run_command, dbg.read(COLOR_RED.."debugger.lua> "..COLOR_RESET))
@@ -507,9 +519,12 @@ dbg = setmetatable({}, {
 dbg.read = dbg_read
 dbg.write = dbg_write
 dbg.writeln = dbg_writeln
+
 dbg.pretty_depth = 3
 dbg.pretty = pretty
 dbg.pp = function(value, depth) dbg.writeln(pretty(value, depth)) end
+
+dbg.auto_where = false
 
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
@@ -557,9 +572,6 @@ function dbg.msgh(...)
 	return ...
 end
 
--- Default auto_where to false
-dbg.auto_where = false
- 
 -- Detect Lua version.
 if jit then -- LuaJIT
 	dbg.writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
