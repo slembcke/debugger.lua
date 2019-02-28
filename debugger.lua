@@ -34,7 +34,7 @@ local COLOR_RESET = ""
 
 local function pretty(obj, max_depth)
 	if max_depth == nil then max_depth = 1 end
-
+	
 	-- Returns true if a table has a __tostring metamethod.
 	local function coerceable(tbl)
 		local meta = getmetatable(tbl)
@@ -53,15 +53,15 @@ local function pretty(obj, max_depth)
 			if depth > max_depth then
 				return tostring(obj)
 			end
-
+			
 			local str = "{"
 			depth = depth + 1
-
+			
 			for k, v in pairs(obj) do
 				local pair = pretty(k, 0).." = "..recurse(v)
 				str = str..(str == "{" and pair or ", "..pair)
 			end
-
+			
 			depth = depth - 1
 			return str.."}"
 		else
@@ -175,7 +175,7 @@ local function local_bindings(offset, include_globals)
 	local level = offset + stack_inspect_offset + CMD_STACK_LEVEL
 	local func = debug.getinfo(level).func
 	local bindings = {}
-
+	
 	-- Retrieve the upvalues
 	do local i = 1; while true do
 		local name, value = debug.getupvalue(func, i)
@@ -183,7 +183,7 @@ local function local_bindings(offset, include_globals)
 		bindings[name] = value
 		i = i + 1
 	end end
-
+	
 	-- Retrieve the locals (overwriting any upvalues)
 	do local i = 1; while true do
 		local name, value = debug.getlocal(level, i)
@@ -191,7 +191,7 @@ local function local_bindings(offset, include_globals)
 		bindings[name] = value
 		i = i + 1
 	end end
-
+	
 	-- Retrieve the varargs (works in Lua 5.2 and LuaJIT)
 	local varargs = {}
 	do local i = 1; while true do
@@ -201,7 +201,7 @@ local function local_bindings(offset, include_globals)
 		i = i + 1
 	end end
 	if #varargs > 0 then bindings["..."] = varargs end
-
+	
 	if include_globals then
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
 		local env = (_VERSION <= "Lua 5.1" and getfenv(func) or bindings._ENV)
@@ -209,13 +209,13 @@ local function local_bindings(offset, include_globals)
 	else
 		return bindings
 	end
-end --189
+end
 
 -- Used as a __newindex metamethod to modify variables in cmd_eval().
 local function mutate_bindings(_, name, value)
 	local FUNC_STACK_OFFSET = 3 -- Stack depth of this function.
 	local level = stack_inspect_offset + FUNC_STACK_OFFSET + CMD_STACK_LEVEL
- 
+	
 	-- Set a local.
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
@@ -225,7 +225,7 @@ local function mutate_bindings(_, name, value)
 		end
 		i = i + 1
 	until var == nil end
- 
+	
 	-- Set an upvalue.
 	local func = debug.getinfo(level).func
 	do local i = 1; repeat
@@ -236,12 +236,12 @@ local function mutate_bindings(_, name, value)
 		end
 		i = i + 1
 	until var == nil end
-	 
+	
 	-- Set a global.
 	dbg.writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
 	_G[name] = value
 end
- 
+
 -- Compile an expression with the given variable bindings.
 local function compile_chunk(block, env)
 	local source = "debugger.lua REPL"
@@ -292,7 +292,7 @@ local function cmd_print(expr)
 	
 	-- Call the chunk and collect the results.
 	local results = pack(pcall(chunk, unpack(rawget(env, "...") or {})))
-
+	
 	-- The first result is the pcall error.
 	if not results[1] then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", results[2])
@@ -316,10 +316,10 @@ local function cmd_eval(code)
 		__index = env,
 		__newindex = mutate_bindings,
 	})
-
+	
 	local chunk = compile_chunk(code, mutable_env)
 	if chunk == nil then return false end
-
+	
 	-- Call the chunk and collect the results.
 	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
 	if not success then
@@ -334,14 +334,14 @@ local function cmd_up()
 		offset = offset + 1
 		info = debug.getinfo(offset + CMD_STACK_LEVEL)
 	until not info or frame_has_file(info)
-
+	
 	if info then
 		stack_inspect_offset = offset
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 		dbg.writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
 	end
-
+	
 	dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
 	return false
 end
@@ -354,14 +354,14 @@ local function cmd_down()
 		if offset < stack_top then info = nil; break end
 		info = debug.getinfo(offset + CMD_STACK_LEVEL)
 	until frame_has_file(info)
-
+	
 	if info then
 		stack_inspect_offset = offset
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 		dbg.writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
-
+	
 	dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
 	return false
 end
@@ -479,12 +479,12 @@ local function run_command(line)
 		dbg.writeln()
 		return true
 	end
-
+	
 	-- Re-execute the last command if you press return.
 	if line == "" then
 		line = last_cmd or "h"
 	end
-
+	
 	local command, command_arg = match_command(line)
 	if command then
 		-- Some commands are not worth repeating.
@@ -494,12 +494,12 @@ local function run_command(line)
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	end
-
+	
 	if #line == 1 then
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
-
+	
 	-- Evaluate the chunk appropriately.
 	if is_expression(line) then cmd_print(line) else cmd_eval(line) end
 end
@@ -563,15 +563,17 @@ function dbg.call(f, ...)
 	local catch = function(err)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, 2)
-
+		
 		return err
 	end
+	
 	if select('#', ...) > 0 then
 		local args = {...}
 		return xpcall(function()
 			return f(unpack(args))
 		end, catch)
 	end
+	
 	return xpcall(f, catch)
 end
 
@@ -634,12 +636,12 @@ end
 if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 	pcall(function()
 		local linenoise = require 'linenoise'
-
+		
 		-- Load command history from ~/.lua_history
 		local hist_path = os.getenv('HOME') .. '/.lua_history'
 		linenoise.historyload(hist_path)
 		linenoise.historysetmaxlen(50)
-
+		
 		local function autocomplete(env, input, matches)
 			for name, _ in pairs(env) do
 				if name:match('^' .. input .. '.*') then
@@ -647,18 +649,18 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 				end
 			end
 		end
-
+		
 		-- Auto-completion for locals and globals
 		linenoise.setcompletion(function(matches, input)
 			-- First, check the locals and upvalues.
 			local env = local_bindings(1, true)
 			autocomplete(env, input, matches)
-
+			
 			-- Then, check the implicit environment.
 			env = getmetatable(env).__index
 			autocomplete(env, input, matches)
 		end)
-
+		
 		dbg.read = function(prompt)
 			local str = linenoise.linenoise(prompt)
 			if str and not str:match "^%s*$" then
@@ -669,7 +671,7 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 		end
 		dbg.writeln(COLOR_RED.."debugger.lua: Linenoise support enabled."..COLOR_RESET)
 	end)
-
+	
 	-- Conditionally enable LuaJIT readline support.
 	pcall(function()
 		if dbg.read == nil and ffi then
