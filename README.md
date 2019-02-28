@@ -27,6 +27,8 @@ How to Use it:
 First of all, there is nothing to install. Just drop debugger.lua into your project and load it using <code>require()</code>. It couldn't be simpler. 
 
 	local dbg = require("debugger")
+	-- Consider enabling auto_where to make stepping through code easier to follow.
+	dbg.auto_where = 2
 	
 	function foo()
 		-- Calling dbg() will enter the debugger on the next executable line, right before it calls print().
