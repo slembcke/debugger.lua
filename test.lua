@@ -64,8 +64,8 @@ tests.run_test(tests.eval, function()
 	dbg()
 	if not upvar then tests.print_red "ERROR: upvalue not set" end
 	
-	-- dbg() TODO not currently supported
-	-- if not GLOBAL then tests.print_red "ERROR: global variable not set" end
+	dbg()
+	if not GLOBAL then tests.print_red "ERROR: global variable not set" end
 end)
 
 tests.run_test(tests.print, function()

@@ -142,9 +142,7 @@ local repl
 
 -- Return false for stack frames without a source file,
 -- which includes C frames, Lua bytecode, and `loadstring` functions
-local function frame_has_file(info)
-	return info.source:sub(1, 1) == "@"
-end
+local function frame_has_file(info) return info.source:sub(1, 1) == "@" end
 
 local function hook_factory(repl_threshold)
 	return function(offset)
@@ -175,27 +173,31 @@ local hook_finish = hook_factory(-1)
 
 local function local_bind(offset, name, value)
 	local level = stack_offset + offset + LOCAL_STACK_LEVEL
-
+	
 	-- Mutating a local?
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
 		if name == var then
+			dbg.writeln(COLOR_RED.."<debugger.lua: set local '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
 			return debug.setlocal(level, i, value)
 		end
 		i = i + 1
 	until var == nil end
-
+	
 	-- Mutating an upvalue?
 	local func = debug.getinfo(level).func
 	do local i = 1; repeat
 		local var = debug.getupvalue(func, i)
 		if name == var then
+			dbg.writeln(COLOR_RED.."<debugger.lua: set upvalue '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
 			return debug.setupvalue(func, i, value)
 		end
 		i = i + 1
 	until var == nil end
-
-	dbg.writeln(COLOR_RED.."Error: "..COLOR_RESET.."Unknown local variable: "..name)
+	
+	-- Set a global.
+	dbg.writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+	_G[name] = value
 end
 
 local function istring(str, sep)
@@ -343,17 +345,7 @@ local function cmd_eval(code)
 
 	-- Call the chunk and collect the results.
 	local success, err = pcall(chunk, unpack(rawget(index, "...") or {}))
-	if success then
-		-- Look for assigned variable names.
-		local names = code:match("^([^{=]+)%s?=[^=]")
-		if names then
-			stack_offset = stack_offset + 1
-			cmd_print(names)
-			stack_offset = stack_offset - 1
-		end
-	else
-		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
-	end
+	if not success then dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err) end
 end
 
 local function cmd_up()

@@ -196,13 +196,13 @@ end
 
 function module.eval()
 	ignore(); cmd "e var = true"
-	ignore(); cmd "c"
+	expect "<debugger.lua: set local 'var'>"; cmd "c"
 	
 	ignore(); cmd "e upvar = true"
-	ignore(); cmd "c"
+	expect "<debugger.lua: set upvalue 'upvar'>"; cmd "c"
 	
-	-- ignore(); cmd "e GLOBAL = true"
-	-- ignore(); cmd "c"
+	ignore(); cmd "e GLOBAL = true"
+	expect "<debugger.lua: set global 'GLOBAL'>"; cmd "c"
 	
 	print_green "EVAL TESTS COMPLETE"
 end
