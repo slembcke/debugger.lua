@@ -169,68 +169,38 @@ local hook_step = hook_factory(1)
 local hook_next = hook_factory(0)
 local hook_finish = hook_factory(-1)
 
-local function local_bind(offset, name, value)
-	local level = stack_inspect_offset + offset + CMD_STACK_LEVEL
-	
-	-- Mutating a local?
-	do local i = 1; repeat
-		local var = debug.getlocal(level, i)
-		if name == var then
-			dbg.writeln(COLOR_RED.."<debugger.lua: set local '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
-			return debug.setlocal(level, i, value)
-		end
-		i = i + 1
-	until var == nil end
-	
-	-- Mutating an upvalue?
-	local func = debug.getinfo(level).func
-	do local i = 1; repeat
-		local var = debug.getupvalue(func, i)
-		if name == var then
-			dbg.writeln(COLOR_RED.."<debugger.lua: set upvalue '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
-			return debug.setupvalue(func, i, value)
-		end
-		i = i + 1
-	until var == nil end
-	
-	-- Set a global.
-	dbg.writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
-	_G[name] = value
-end
-
 -- Create a table of all the locally accessible variables.
 -- Globals are not included when running the locals command, but are when running the print command.
 local function local_bindings(offset, include_globals)
-	local level = stack_inspect_offset + offset + CMD_STACK_LEVEL
+	local level = offset + stack_inspect_offset + CMD_STACK_LEVEL
 	local func = debug.getinfo(level).func
 	local bindings = {}
-	local i
 
 	-- Retrieve the upvalues
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getupvalue(func, i)
 		if not name then break end
 		bindings[name] = value
 		i = i + 1
-	end
+	end end
 
 	-- Retrieve the locals (overwriting any upvalues)
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getlocal(level, i)
 		if not name then break end
 		bindings[name] = value
 		i = i + 1
-	end
+	end end
 
 	-- Retrieve the varargs (works in Lua 5.2 and LuaJIT)
 	local varargs = {}
-	i = 1; while true do
+	do local i = 1; while true do
 		local name, value = debug.getlocal(level, -i)
 		if not name then break end
 		varargs[i] = value
 		i = i + 1
-	end
-	if i > 1 then bindings["..."] = varargs end
+	end end
+	if #varargs > 0 then bindings["..."] = varargs end
 
 	if include_globals then
 		-- In Lua 5.2, you have to get the environment table from the function's locals.
@@ -241,6 +211,37 @@ local function local_bindings(offset, include_globals)
 	end
 end --189
 
+-- Used as a __newindex metamethod to modify variables in cmd_eval().
+local function mutate_bindings(_, name, value)
+	local FUNC_STACK_OFFSET = 3 -- Stack depth of this function.
+	local level = stack_inspect_offset + FUNC_STACK_OFFSET + CMD_STACK_LEVEL
+ 
+	-- Set a local.
+	do local i = 1; repeat
+		local var = debug.getlocal(level, i)
+		if name == var then
+			dbg.writeln(COLOR_RED.."<debugger.lua: set local '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+			return debug.setlocal(level, i, value)
+		end
+		i = i + 1
+	until var == nil end
+ 
+	-- Set an upvalue.
+	local func = debug.getinfo(level).func
+	do local i = 1; repeat
+		local var = debug.getupvalue(func, i)
+		if name == var then
+			dbg.writeln(COLOR_RED.."<debugger.lua: set upvalue '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+			return debug.setupvalue(func, i, value)
+		end
+		i = i + 1
+	until var == nil end
+	 
+	-- Set a global.
+	dbg.writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+	_G[name] = value
+end
+ 
 -- Compile an expression with the given variable bindings.
 local function compile_chunk(block, env)
 	local source = "debugger.lua REPL"
@@ -310,20 +311,20 @@ local function cmd_print(expr)
 end
 
 local function cmd_eval(code)
-	local index = local_bindings(1, true)
-	local env = setmetatable({}, {
-		__index = index,
-		__newindex = function(env, name, value)
-			local_bind(4, name, value)
-		end
+	local env = local_bindings(1, true)
+	local mutable_env = setmetatable({}, {
+		__index = env,
+		__newindex = mutate_bindings,
 	})
 
-	local chunk = compile_chunk(code, env)
+	local chunk = compile_chunk(code, mutable_env)
 	if chunk == nil then return false end
 
 	-- Call the chunk and collect the results.
-	local success, err = pcall(chunk, unpack(rawget(index, "...") or {}))
-	if not success then dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err) end
+	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
+	if not success then
+		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." %s", err)
+	end
 end
 
 local function cmd_up()
@@ -403,19 +404,15 @@ end
 
 local function cmd_trace()
 	local location = format_stack_frame_info(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL))
-	local offset = stack_inspect_offset - stack_top
-	local message = string.format("Inspecting frame: %d - (%s)", offset, location)
+	local message = string.format("Inspecting frame: %d - (%s)", stack_inspect_offset - stack_top, location)
 	local str = debug.traceback(message, stack_top + CMD_STACK_LEVEL)
 	
-	-- Iterate the lines of the stack trace so we can highlight the current one.
-	local line_num = -2
-	while str and #str ~= 0 do
-		local line, rest = string.match(str, "([^\n]*)\n?(.*)")
-		str = rest
-		
-		if line_num >= 0 then line = tostring(line_num)..line end
-		dbg.writeln((line_num + stack_top == stack_inspect_offset) and COLOR_BLUE..line..COLOR_RESET or line)
-		line_num = line_num + 1
+	-- Iterate the lines of the stack trace so we can number/highlight them.
+	local i = -2
+	for line in str:gmatch("([^\n]+)\n?") do
+		if i >= 0 then line = tostring(i)..line end
+		dbg.writeln((i + stack_top == stack_inspect_offset) and COLOR_BLUE..line..COLOR_RESET or line)
+		i = i + 1
 	end
 	
 	return false
@@ -432,9 +429,9 @@ local function cmd_locals()
 	for _, k in ipairs(keys) do
 		local v = bindings[k]
 		
-		-- Skip the debugger object itself, temporaries and Lua 5.2's _ENV object.
-		if not rawequal(v, dbg) and k ~= "_ENV" and k ~= "(*temporary)" then
-			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v, 0))
+		-- Skip the debugger object itself, "(*internal)" values, and Lua 5.2's _ENV object.
+		if not rawequal(v, dbg) and k ~= "_ENV" and not k:match("%(.*%)") then
+			dbg.writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
 	
@@ -453,7 +450,7 @@ local function match_command(line)
 		["e (.*)"] = cmd_eval,
 		["u"] = cmd_up,
 		["d"] = cmd_down,
-		["w%s?(%d*)"] = cmd_where,
+		["w ?(%d*)"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
@@ -461,10 +458,8 @@ local function match_command(line)
 	}
 	
 	for cmd, cmd_func in pairs(commands) do
-		local matches = {string.match(line, "^("..cmd..")$")}
-		if matches[1] then
-			return cmd_func, select(2, unpack(matches))
-		end
+		local matches = {line:match("^("..cmd..")$")}
+		if matches[1] then return cmd_func, select(2, unpack(matches)) end
 	end
 end
 
@@ -526,12 +521,12 @@ end
 
 -- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
-	__call = function(self, condition, offset)
+	__call = function(self, condition, top_offset)
 		if condition then return end
 		
-		offset = (offset or 0)
-		stack_inspect_offset = offset
-		stack_top = offset
+		top_offset = (top_offset or 0)
+		stack_inspect_offset = top_offset
+		stack_top = top_offset
 		
 		debug.sethook(hook_next(1), "crl")
 		return
@@ -582,12 +577,15 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	dbg.write(string.format(...))
+	dbg.write(...)
 	dbg(false, 1)
 	
 	return ...
 end
 
+-- Default auto_where to false
+dbg.auto_where = false
+ 
 -- Detect Lua version.
 if jit then -- LuaJIT
 	dbg.writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
