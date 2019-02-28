@@ -24,14 +24,12 @@ function string.strip(str) return str:match("^%s*(.-)%s*$") end
 local module = {}
 
 -- Debugger command line string to run next.
-local command_string
-local function cmd(str) command_string = str end
+local commands = {}
+local function cmd(str) table.insert(commands, str) end
 
 dbg.read = function(prompt)
-	lua_assert(command_string, COLOR_RED.."Command not set!"..COLOR_RESET)
-	
-	local str = command_string
-	command_string = nil
+	local str = table.remove(commands, 1)
+	lua_assert(str, COLOR_RED.."Command not set!"..COLOR_RESET)
 	
 	if LOG_IO then print(prompt..str) end
 	return str
@@ -89,7 +87,7 @@ function module.run_test(test, test_body)
 	dbg.write = sanity_write
 	
 	if coroutine.status(coro) ~= "dead" then
-		print_red("FAILURE: test coroutine not complete")
+		print_red("FAILURE: test coroutine not finished")
 	end
 end
 
@@ -197,13 +195,55 @@ function module.where()
 end
 
 function module.eval()
-	ignore()
-	cmd "e lvar = true"
-	-- Hmm... need to set two commands in a row for this to work.
-	-- cmd "c"
+	ignore(); cmd "e var = true"
+	ignore(); cmd "c"
 	
+	ignore(); cmd "e upvar = true"
+	ignore(); cmd "c"
+	
+	-- ignore(); cmd "e GLOBAL = true"
+	-- ignore(); cmd "c"
+	
+	print_green "EVAL TESTS COMPLETE"
+end
+
+function module.print()
 	ignore()
+	
+	-- Basic types
+	cmd "p 1+1"; expect "1+1 => 2"
+	cmd "p 1, 2, 3, 4"; expect "1, 2, 3, 4 => 1, 2, 3, 4"
+	cmd 'p "str"'; expect '"str" => "str"'
+	cmd 'p "\\0"'; expect '"\\0" => "\\0"'
+	cmd "p {}"; expect "{} => {}"
+	
+	-- Kinda light on table examples because I want to avoid iteration order issues.
+	cmd "p {1, 2, 3}"; expect "{1, 2, 3} => {1 = 1, 2 = 2, 3 = 3}"
+	cmd "p {{}}"; expect "{{}} => {1 = {}}"
+	
+	cmd "p nil, false"; expect "nil, false => nil, false"
+	cmd "p nil, nil, false"; expect "nil, nil, false => nil, nil, false"
+	cmd "p nil, nil, nil, false"; expect "nil, nil, nil, false => nil, nil, nil, false"
+	
+	CIRCULAR_REF = {}
+	CIRCULAR_REF.ref = CIRCULAR_REF
+	
+	-- Don't particularly care about the result as long as it doesn't get stuck in a loop.
+	cmd "p CIRCULAR_REF"; ignore()
+	
 	cmd "c"
+	print_green "PRINT TESTS COMPLETE"
+end
+
+function module.locals()
+	ignore()
+	
+	cmd "l"
+	expect 'upvar => true'
+	expect 'var => "foobar"'
+	
+	cmd "c"
+	print_green "LOCALS TESTS COMPLETE"
 end
 
 module.print_red = print_red

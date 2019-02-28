@@ -57,19 +57,24 @@ GLOBAL = false
 local upvar = false
 
 tests.run_test(tests.eval, function()
-	local lvar = false
+	local var = false
 	dbg()
-	if not lvar then tests.print_red "ERROR: local variable not set" end
+	if not var then tests.print_red "ERROR: local variable not set" end
 	
-	-- dbg()
-	-- if not upvar then tests.print_red "ERROR: upvalue not set" end
+	dbg()
+	if not upvar then tests.print_red "ERROR: upvalue not set" end
 	
-	-- dbg()
+	-- dbg() TODO not currently supported
 	-- if not GLOBAL then tests.print_red "ERROR: global variable not set" end
-	
-	tests.print_green "EVAL TESTS COMPLETE"
 end)
 
--- e, p, l
+tests.run_test(tests.print, function()
+	dbg()
+end)
+
+tests.run_test(tests.locals, function()
+	local var = upvar and "foobar"
+	dbg()
+end)
 
 tests.print_green "TESTS COMPLETE"
