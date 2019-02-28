@@ -474,23 +474,14 @@ end
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
-	-- Continue without caching the command if you hit control-d.
-	if line == nil then
-		dbg.writeln()
-		return true
-	end
+	-- GDB/LLDB exit on ctrl-d
+	if line == nil then os.exit(1) end
 	
 	-- Re-execute the last command if you press return.
-	if line == "" then
-		line = last_cmd or "h"
-	end
+	if line == "" then line = last_cmd or "h" end
 	
 	local command, command_arg = match_command(line)
 	if command then
-		-- Some commands are not worth repeating.
-		if not line:match("^[hlt]$") then
-			last_cmd = line
-		end
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
 	end
