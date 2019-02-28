@@ -102,8 +102,6 @@ local stack_top = 0
 -- Changed using the up/down commands
 local stack_offset = 0
 
-local source_contents = {}
-
 local dbg
 
 -- Default dbg.read function
@@ -198,26 +196,6 @@ local function local_bind(offset, name, value)
 	-- Set a global.
 	dbg.writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
 	_G[name] = value
-end
-
-local function istring(str, sep)
-  local sep = sep or "\n"
-  local pattern = string.format("(.-)(%s)", sep)
-
-  local ipos, iidx = 1, 0
-  return function()
-    iidx = iidx + 1
-
-    local spos, epos, capture = string.find(str, pattern, ipos)
-    if spos then
-      ipos = epos + 1
-      return iidx, capture
-    elseif ipos <= #str then
-      capture = string.sub(str, ipos)
-      ipos = #str + 1
-      return iidx, capture
-    end
-  end
 end
 
 -- Create a table of all the locally accessible variables.
@@ -387,39 +365,40 @@ local function cmd_down()
 	return false
 end
 
-local function cmd_where(line_num)
+local SOURCE_CACHE = {["<unknown filename>"] = {}}
+
+local function cmd_where(context_lines)
+	context_lines = tonumber(context_lines) or 5
+	
 	local info = debug.getinfo(stack_offset + LOCAL_STACK_LEVEL)
-	if not info then return end
-
-	local source = info.source
-	local source_lidx = info.currentline
-
-	local source_filename = string.match(source, "^@(.*)$")
-	if source_filename then
-		if source_contents[source_filename] then
-			source = source_contents[source_filename]
-		else
-			local source_file = io.open(source_filename, "r")
-			if not source_file then source = nil
-			else source = source_file:read("*a"); source_file:close() end
-
-			source_contents[source_filename] = source
-		end
-	end
-
+	if not info then return false end
+	
+	local key = info.source or "<unknown filename>"
+	local source = SOURCE_CACHE[key]
+	
 	if not source then
-		dbg.writeln(COLOR_RED.."Error: Could not find source file for current function."..COLOR_RESET)
-	else
-		local line_num = tonumber(line_num) or 5
-		local line_min, line_max = source_lidx - line_num, source_lidx + line_num
-
-		for lidx, source_line in istring(source, "\n") do
-			if lidx >= line_min and lidx <= line_max then
-				dbg.writeln(COLOR_BLUE.."%d\t"..COLOR_RED.."%s"..COLOR_RESET.."%s",
-				tonumber(lidx), (lidx == source_lidx and "=> " or "   "), source_line)
-			end
+		source = {}
+		local filename = info.source:match("@(.*)")
+		if filename then
+			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
+		else
+			for line in info.source:gmatch("(.-)\n") do table.insert(source, line) end
 		end
+		
+		SOURCE_CACHE[key] = source
 	end
+	
+	if source[info.currentline] then
+		for i = info.currentline - context_lines, info.currentline + context_lines do
+			local caret = (i == info.currentline and " => " or "    ")
+			local line = source[i]
+			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
+		end
+	else
+		dbg.writeln(COLOR_RED.."Error: '%s' not found.", filename);
+	end
+	
+	return false
 end
 
 local function cmd_trace()
