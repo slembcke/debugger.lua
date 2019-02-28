@@ -18,14 +18,18 @@ print[[
 	line as well as which function you are in.
 	Keep a close watch on this as you follow along.
 	It should be stopped a line after the dbg() call.
-	(Line 80 probably?)
+	(Line 84 unless I forgot to double check it)
 	
 	Sometimes functions don't have global names.
 	It might print the method name, local variable
 	that held the function, or file:line where it starts.
 	
-	Type 's' to step to the next line.
-	(s = Step to the next executable line)
+	Type 'w 5' to show 5 lines of surrounding code directly in
+	the debugger. (w = Where) Set dbg.auto_where to a number
+	to run it automatically at each breakpoint.
+	
+	Once you've tried the Where command, type 's' to step to
+	the next line. (s = Step to the next executable line)
 ]]
 
 -- Multi-line strings are executable statements apparently
@@ -140,7 +144,7 @@ function func4(a, b, ...)
 	Often times it's useful to print just a single variable,
 	evaluate an expression, or call a function to see what it returns.
 	For that you use the 'p' command.
-	(p = Print or evaluate an expression)
+	(p = Print the result of an expression)
 	
 	Try these commands:
 	p my_upvalue1
@@ -153,6 +157,19 @@ function func4(a, b, ...)
 	p ...
 	p select(2, ...)
 	p {...}
+	
+	Type 'c' to continue to the next section.
+]]
+	dbg()
+	
+	print[[
+	One thing you can't do with the print command is set variables.
+	Assignments are statements, and need to be run with the
+	'e' command. (e = Evaluate a statement)
+	
+	Try these commands:
+	e my_upvalue1 = "foobar"
+	e print(my_upvalue1)
 	
 	Type 'c' to continue to the next section.
 ]]

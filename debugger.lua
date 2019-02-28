@@ -270,7 +270,7 @@ function where(info, context_lines)
 			if line then dbg.writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
 		end
 	else
-		dbg.writeln(COLOR_RED.."Error: '%s' not found.", filename);
+		dbg.writeln(COLOR_RED.."Error: Source file '%s' not found.", info.source);
 	end
 	
 	return false
