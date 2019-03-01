@@ -120,19 +120,19 @@ end
 
 local repl
 
--- Return false for stack frames without a source file,
+-- Return false for stack frames without source,
 -- which includes C frames, Lua bytecode, and `loadstring` functions
-local function frame_has_file(info) return info.source:sub(1, 1) == "@" end
+local function frame_has_line(info) return info.currentline >= 0 end
 
 local function hook_factory(repl_threshold)
 	return function(offset)
 		return function(event, _)
 			local info = debug.getinfo(2)
-			local has_file = frame_has_file(info)
+			local has_line = frame_has_line(info)
 			
-			if event == "call" and has_file then
+			if event == "call" and has_line then
 				offset = offset + 1
-			elseif event == "return" and has_file then
+			elseif event == "return" and has_line then
 				if offset <= repl_threshold then
 					-- TODO this is what causes the duplicated lines
 					-- Don't remember why this is even here...
@@ -346,7 +346,7 @@ local function cmd_up()
 	repeat -- Find the next frame with a file.
 		offset = offset + 1
 		info = debug.getinfo(offset + CMD_STACK_LEVEL)
-	until not info or frame_has_file(info)
+	until not info or frame_has_line(info)
 	
 	if info then
 		stack_inspect_offset = offset
@@ -369,7 +369,7 @@ local function cmd_down()
 		offset = offset - 1
 		if offset < stack_top then info = nil; break end
 		info = debug.getinfo(offset + CMD_STACK_LEVEL)
-	until frame_has_file(info)
+	until frame_has_line(info)
 	
 	if info then
 		stack_inspect_offset = offset
@@ -485,7 +485,7 @@ end
 
 repl = function()
 	-- Skip frames without source info.
-	while not frame_has_file(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
+	while not frame_has_line(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
 		stack_inspect_offset = stack_inspect_offset + 1
 	end
 	
