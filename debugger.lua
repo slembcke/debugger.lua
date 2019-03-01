@@ -436,7 +436,7 @@ local function match_command(line)
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg.writeln(help_message); return false end,
-		["q"] = function() os.exit(0) end,
+		["q"] = function() dbg.exit(0) end,
 	}
 	
 	for cmd, cmd_func in pairs(commands) do
@@ -449,7 +449,7 @@ end
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
 	-- GDB/LLDB exit on ctrl-d
-	if line == nil then os.exit(1) end
+	if line == nil then dbg.exit(1) end
 	
 	-- Re-execute the last command if you press return.
 	if line == "" then line = last_cmd or "h" end
@@ -507,6 +507,8 @@ dbg = setmetatable({}, {
 -- Expose the debugger's IO functions.
 dbg.read = dbg_read
 dbg.write = dbg_write
+dbg.exit = function(err) os.exit(err) end
+
 dbg.writeln = dbg_writeln
 
 dbg.pretty_depth = 3
