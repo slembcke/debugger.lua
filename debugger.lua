@@ -549,7 +549,7 @@ end
 function dbg.call(f, ...)
 	local catch = function(err)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
-		dbg(false, 2)
+		dbg(false, 1)
 		
 		return err
 	end
