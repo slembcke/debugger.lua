@@ -484,7 +484,12 @@ local function run_command(line)
 end
 
 repl = function()
-	local info = debug.getinfo(stack_top + CMD_STACK_LEVEL - 3)
+	-- Skip frames without source info.
+	while not frame_has_file(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
+		stack_inspect_offset = stack_inspect_offset + 1
+	end
+	
+	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)
 	dbg.writeln(format_stack_frame_info(info))
 	
 	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
