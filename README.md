@@ -124,6 +124,26 @@ If you have used other CLI debuggers, debugger.lua should present no surprises. 
 
 If you've never used a CLI debugger before. Start a nice warm cozy fire, run tutorial.lua and open it up in your favorite editor so you can follow along.
 
+Extras
+-
+
+There are several overloadable functions you can use to customize debugger.lua.
+* `dbg.read(prompt)` - Show the prompt and block for user input. (Defaults to read from stdin)
+* `dbg.write(str)` - Write a string to the output. (Defaults to write to stdout)
+* `dbg.shorten_path(path)` - Return a shortened version of a path. (Defaults to nothing)
+* `dbg.exit(err)` - Stop debugging. (Defaults to `os.exit(err)`)
+Using these you can customize the debugger to work in your environment. For instance, you can divert the I/O over a network socket or to a GUI window.
+
+There are also some goodies you can use to make debugging easier.
+* `dbg.writeln(format, ...)` - Basically the same as `dbg.write(string.format(format.."\n", ...))`
+* `dbg.pretty_depth = int` - Set how deep `dbg.pretty()` formats tables.
+* `dbg.pretty(obj)` - Will return a pretty print string of an object.
+* `dbg.pp(obj)` - Basically the same as `dbg.writeln(dbg.pretty(obj))`
+* `dbg.auto_where = int_or_false` - Set the where command to run automatically when the active line changes. The value is the number of context lines.
+* `dbg.error(error, [level])` - Drop in replacement for `error()` that breaks in the debugger.
+* `dbg.assert(error, [message])` - Drop in replacement for `assert()` that breaks in the debugger.
+* `dbg.call(f, ...)` - Drop in replacement for `pcall()` that breaks in the debugger.
+
 Environment Variables:
 -
 
@@ -133,8 +153,8 @@ Known Issues:
 -
 
 - Lua 5.1 lacks the API to access varargs. The workaround is to do something like <code>local args = {...}</code> and then use <code>unpack(args)</code> when you want to access them. In Lua 5.2+ and LuaJIT, you can simply use <code>...</code> in your expressions with the print command.
-- You can't add breakpoints to a running program or remove them. Currently the only way to set them is by explicitly calling the <code>dbg()</code> function explicitly in your code. (This is sort of by design and sort of because it's difficult.)
-- Different interpreters (and versions) print out different stack trace information.
+- You can't add breakpoints to a running program or remove them. Currently the only way to set them is by explicitly calling the <code>dbg()</code> function explicitly in your code. (This is sort of by design and sort of because it's difficult/slow otherwise.)
+- Different interpreters (and versions) print out slightly different stack trace information.
 - Tail calls are handled silghtly differently in different interpreters. You may find that 1.) stepping into a function that does nothing but a tail call steps you into the tail called function. 2.) The interpreter gives you the wrong name of a tail called function (watch the line numbers). 3.) Stepping out of a tail called function also steps out of the function that performed the tail call. Mostly this is never a problem, but it is a little confusing if you don't know what is going on.
 - Coroutine support has not been tested extensively yet, and Lua vs. LuaJIT handle them differently anyway. -_-
 
