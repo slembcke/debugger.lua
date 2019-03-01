@@ -112,7 +112,7 @@ local function dbg_writeln(str, ...)
 end
 
 local function format_stack_frame_info(info)
-	local path = info.source:sub(2)
+	local path = dbg.shorten_path(info.source:sub(2))
 	local fname = (info.name or string.format("<%s:%d>", path, info.linedefined))
 	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", path, info.currentline, fname)
 end
@@ -506,6 +506,7 @@ dbg = setmetatable({}, {
 -- Expose the debugger's IO functions.
 dbg.read = dbg_read
 dbg.write = dbg_write
+dbg.shorten_path = function (path) return path end
 dbg.exit = function(err) os.exit(err) end
 
 dbg.writeln = dbg_writeln
