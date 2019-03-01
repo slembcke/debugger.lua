@@ -127,19 +127,14 @@ local function frame_has_line(info) return info.currentline >= 0 end
 local function hook_factory(repl_threshold)
 	return function(offset)
 		return function(event, _)
-			local info = debug.getinfo(2)
-			local has_line = frame_has_line(info)
+			-- Skip events that don't have line information.
+			if not frame_has_line(debug.getinfo(2)) then return end
 			
-			if event == "call" and has_line then
+			-- Tail calls are specifically ignored since they also will have tail returns to balance out.
+			if event == "call" then
 				offset = offset + 1
-			elseif event == "return" and has_line then
-				if offset <= repl_threshold then
-					-- TODO this is what causes the duplicated lines
-					-- Don't remember why this is even here...
-					--repl()
-				else
-					offset = offset - 1
-				end
+			elseif event == "return" and offset > repl_threshold then
+				offset = offset - 1
 			elseif event == "line" and offset <= repl_threshold then
 				repl()
 			end
