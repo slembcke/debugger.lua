@@ -445,14 +445,6 @@ local function match_command(line)
 	end
 end
 
--- Try loading a chunk with a leading return.
-local function is_expression(block)
-	if _VERSION <= "Lua 5.1" then
-		return loadstring("return "..block, "") ~= nil
-	end
-	return load("return "..block, "", "t") ~= nil
-end
-
 -- Run a command line
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
@@ -473,9 +465,6 @@ local function run_command(line)
 		dbg.writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
-	
-	-- Evaluate the chunk appropriately.
-	if is_expression(line) then cmd_print(line) else cmd_eval(line) end
 end
 
 repl = function()
