@@ -547,21 +547,12 @@ end
 
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, ...)
-	local catch = function(err)
+	return xpcall(f, function(err)
 		dbg.writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
 		dbg(false, 1)
 		
 		return err
-	end
-	
-	if select('#', ...) > 0 then
-		local args = {...}
-		return xpcall(function()
-			return f(unpack(args))
-		end, catch)
-	end
-	
-	return xpcall(f, catch)
+	end, ...)
 end
 
 -- Error message handler that can be used with lua_pcall().
