@@ -214,7 +214,7 @@ function module.print()
 	cmd "p 1+1"; expect "1+1 => 2"
 	cmd "p 1, 2, 3, 4"; expect "1, 2, 3, 4 => 1, 2, 3, 4"
 	cmd 'p "str"'; expect '"str" => "str"'
-	cmd 'p "\\0"'; expect '"\\0" => "\\0"'
+	cmd 'p "\\0"'; expect_match '"\\0" => "\\0+"'
 	cmd "p {}"; expect "{} => {}"
 	
 	-- Kinda light on table examples because I want to avoid iteration order issues.

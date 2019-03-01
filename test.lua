@@ -75,6 +75,11 @@ end)
 tests.run_test(tests.locals, function()
 	local var = upvar and "foobar"
 	dbg()
+	
+	-- Need a no-op here.
+	-- Lua 5.1 variables go out of scope right before 'end'
+	-- All other versions go out of scope right after.
+	_ = _
 end)
 
 tests.print_green "TESTS COMPLETE"
