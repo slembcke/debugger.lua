@@ -105,7 +105,7 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int _msgh){
 	lua_insert(lua, msgh);
 	
 	// Call the function.
-	bool err = lua_pcall(lua, nargs, nresults, msgh);
+	int err = lua_pcall(lua, nargs, nresults, msgh);
 	
 	// Remove the debug handler.
 	lua_remove(lua, -(nresults + 1));
