@@ -65,7 +65,7 @@ First of all, there is nothing to install. Just drop debugger.lua into your proj
 Super Simple C API:
 -
 
-debugger.lua can be easily integrated into an embedded project by including a single .c (and .h) file. First, you'll need to run `lua debugger.c.lua`. This generates debugger.c by inserting the lua code into a template .c file.
+debugger.lua can be easily integrated into an embedded project by including a single .c (and .h) file. First, you'll need to run `lua embed/debugger.c.lua`. This generates embed/debugger.c by inserting the lua code into a template .c file.
 
 	int main(int argc, char **argv){
 		lua_State *lua = luaL_newstate();
