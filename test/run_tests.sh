@@ -1,3 +1,6 @@
+lua test.lua
+echo
+
 lua5.1 test.lua
 echo
 

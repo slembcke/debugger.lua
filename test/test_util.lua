@@ -1,3 +1,5 @@
+package.path = package.path .. ";../?.lua"
+
 -- Hack to disable color support
 local getenv = os.getenv
 os.getenv = function(sym) return (sym == "TERM") and "dumb" or getenv(sym) end
