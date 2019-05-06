@@ -69,7 +69,7 @@ Super Simple C API:
 
 debugger.lua can be easily integrated into an embedded project by including a single .c (and .h) file. First, you'll need to run `lua embed/debugger.c.lua`. This generates embed/debugger.c by inserting the lua code into a template .c file.
 
-```lua
+```c
 int main(int argc, char **argv){
 	lua_State *lua = luaL_newstate();
 	luaL_openlibs(lua);
