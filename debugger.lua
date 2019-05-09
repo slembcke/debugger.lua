@@ -70,7 +70,7 @@ c(ontinue) - continue execution
 s(tep) - step forward by one line (into functions)
 n(ext) - step forward by one line (skipping over functions)
 g(go) - step to a given line. Defaults to the next line.
-b(breakpoint) - add, list or remove breakpoints usage b [a|l|r] [line|*]
+b(breakpoint) - add, list or remove breakpoints usage b [a|l|c] [line|*]
 f(inish) - step forward until exiting the current function
 u(p) - move up the stack by one frame
 d(own) - move down the stack by one frame
@@ -422,47 +422,43 @@ local function cmd_locals()
 	return false
 end
 
---
--- Specify a specific Line to reach.
--- (experimental)
+-- Specify a specific Line to reach. (experimental)
 local goto_line
 function cmd_goto(ln)
-	if(ln~="") then goto_line= tonumber(ln) end 
+	if(ln~="") then goto_line=tonumber(ln) end
 	DBG_MODE_STEP=true
 	return true, hook_goto
 end
 
---
--- Specify or remove a breakpoint.
--- (experimental)
+-- Specify or remove a breakpoint. (experimental)
+-- todo: what about multiple Files?
 local breakpoints={}
 function cmd_breakp(options)
-	local action,line_no =string.match(options, "(%w)%s*([%d%*]*)")
+	local action,line_no=string.match(options, "(%w)%s*([%d%*]*)")
 
 	if (action == "a") then
 		breakpoints[tonumber(line_no)]=true
 		DBG_MODE_STEP=true
-	elseif	(action == "r" and line_no=='*') then
+		dbg_writeln(COLOR_BLUE.."Added Breakpoint for Line ".. line_no..COLOR_RESET)
+	elseif	(action == "c" and line_no=='*') then
 		breakpoints={}
 		DBG_MODE_STEP=false
-	elseif (action == "r") then
-	print(breakpoints[tonumber(line_no)])
+		dbg_writeln(COLOR_BLUE.."Cleared all Breakpoints"..COLOR_RESET)
+	elseif (action == "c") then
 		breakpoints[tonumber(line_no)]=nil
 		if (#breakpoints==0) then DBG_MODE_STEP=false end
+		dbg_writeln(COLOR_BLUE.."Breakpoint for Line ".. line_no.." cleared"..COLOR_RESET)
 	elseif	(action == "l") then
-		dbg_writeln("Breakpints:")
+		dbg_writeln("Breakpoints:")
 		for bp,status in pairs(breakpoints) do
 			dbg_writeln("line "..bp)
 		end
 	end
-	
-	return false, hook_goto
+
+	return false
 end
 
---
--- Continue program flow
--- Either without hooks or stepwise
---
+-- Continue program flow, either without hooks or stepwise
 function cmd_cont()
 	if (DBG_MODE_STEP==true) then return true, hook_goto end
 	return true
@@ -475,7 +471,7 @@ local function match_command(line)
 		["c"] = cmd_cont,
 		["s"] = cmd_step,
 		["g ?(%d*)"] = cmd_goto,
-		["b (.*)"] = cmd_breakp,
+		["b ?(.*)"] = cmd_breakp,
 		["n"] = cmd_next,
 		["f"] = cmd_finish,
 		["p (.*)"] = cmd_print,
@@ -523,10 +519,12 @@ repl = function(line_no)
 	while not frame_has_line(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
 		stack_inspect_offset = stack_inspect_offset + 1
 	end	
-	
-	-- First Idea about checking stuff per line, currently able to do [goto {lineNr}]
+
+	-- First Idea about checking stuff per line, currently used for [goto {lineNr}] and breakpoints
 	if(breakpoints[line_no]==nil and DBG_MODE_STEP==true and goto_line~=line_no ) then
 		return
+	elseif (#breakpoints==0) then
+		DBG_MODE_STEP=false
 	end
 	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)
