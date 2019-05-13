@@ -482,7 +482,7 @@ local function match_command(line)
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
 		["h"] = function() dbg_writeln(help_message); return false end,
-		["q"] = function() dbg.exit(0); return true end,
+		["q"] = function() return true end
 	}
 	
 	for cmd, cmd_func in pairs(commands) do
@@ -495,8 +495,12 @@ end
 -- Returns true if the REPL should exit and the hook function factory
 local function run_command(line)
 	-- GDB/LLDB exit on ctrl-d
-	if line == nil then dbg.exit(1); return true end
-	
+	if line == nil then
+		return -2
+	elseif line=="q" then
+		return -1
+	end
+
 	-- Re-execute the last command if you press return.
 	if line == "" then line = last_cmd or "h" end
 	
@@ -539,6 +543,13 @@ repl = function(line_no)
 			local message = string.format(COLOR_RED.."INTERNAL DEBUGGER.LUA ERROR. ABORTING\n:"..COLOR_RESET.." %s", done)
 			dbg_writeln(message)
 			error(message)
+		end
+		if done==-2 then
+			dbg_writeln(COLOR_RED.."No Command given. Quitting debugger.lua"..COLOR_RESET)
+			dbg.exit(0)
+		elseif done==-1 then
+			dbg_writeln(COLOR_BLUE.."Quitting debugger.lua"..COLOR_RESET)
+			dbg.exit(0)
 		end
 	until done
 end
