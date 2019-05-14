@@ -26,82 +26,88 @@ How to Use it:
 
 First of all, there is nothing to install. Just drop debugger.lua into your project and load it using <code>require()</code>. It couldn't be simpler. 
 
-	local dbg = require("debugger")
-	-- Consider enabling auto_where to make stepping through code easier to follow.
-	dbg.auto_where = 2
-	
-	function foo()
-		-- Calling dbg() will enter the debugger on the next executable line, right before it calls print().
-		-- Once in the debugger, you will be able to step around and inspect things.
-		dbg()
-		print("Woo!")
-		
-		-- Maybe you only want to start the debugger on a certain condition.
-		-- If you pass a value to dbg(), it works like an assert statement.
-		-- The debugger only triggers if it's nil or false.
-		dbg(5 == 5) -- Will be ignored
-		
-		print("Fooooo!")
-	end
-	
-	foo()
-	
-	-- You can also wrap a chunk of code in a dbg.call() block.
-	-- Any error that occurs will cause the debugger to attach.
-	-- Then you can inspect the cause.
-	-- (NOTE: dbg.call() expects a function that takes no parameters)
-	dbg.call(function()
-		-- Put some buggy code in here:
-		local err1 = "foo" + 5
-		local err2 = (nil).bar
-	end)
-	
-	-- Lastly, you can override the standard Lua error() and assert() functions if you want:
-	-- These variations will enter the debugger instead of aborting the program.
-	-- dbg.call() is generally more useful though.
-	local assert = dbg.assert
-	local error = dbg.error
+```lua
+local dbg = require("debugger")
+-- Consider enabling auto_where to make stepping through code easier to follow.
+dbg.auto_where = 2
+
+function foo()
+	-- Calling dbg() will enter the debugger on the next executable line, right before it calls print().
+	-- Once in the debugger, you will be able to step around and inspect things.
+	dbg()
+	print("Woo!")
+
+	-- Maybe you only want to start the debugger on a certain condition.
+	-- If you pass a value to dbg(), it works like an assert statement.
+	-- The debugger only triggers if it's nil or false.
+	dbg(5 == 5) -- Will be ignored
+
+	print("Fooooo!")
+end
+
+foo()
+
+-- You can also wrap a chunk of code in a dbg.call() block.
+-- Any error that occurs will cause the debugger to attach.
+-- Then you can inspect the cause.
+-- (NOTE: dbg.call() expects a function that takes no parameters)
+dbg.call(function()
+	-- Put some buggy code in here:
+	local err1 = "foo" + 5
+	local err2 = (nil).bar
+end)
+
+-- Lastly, you can override the standard Lua error() and assert() functions if you want:
+-- These variations will enter the debugger instead of aborting the program.
+-- dbg.call() is generally more useful though.
+local assert = dbg.assert
+local error = dbg.error
+```
 
 Super Simple C API:
 -
 
 debugger.lua can be easily integrated into an embedded project by including a single .c (and .h) file. First, you'll need to run `lua embed/debugger.c.lua`. This generates embed/debugger.c by inserting the lua code into a template .c file.
 
-	int main(int argc, char **argv){
-		lua_State *lua = luaL_newstate();
-		luaL_openlibs(lua);
-		
-		// The 2nd parameter is the module name. (Ex: require("debugger") )
-		// The 3rd parameter is the name of a global variable to bind it to, or NULL if you don't want one.
-		// The last two are lua_CFunctions for overriding the I/O functions.
-		// A NULL I/O function  means to use standard input or output respectively.
-		dbg_setup(lua, "debugger", "dbg", NULL, NULL);
-		
-		// Load some lua code and prepare to call the MyBuggyFunction() defined below...
-		
-		// dbg_pcall() is called exactly like lua_pcall().
-		// Although note that using a custom message handler disables the debugger.
-		if(dbg_pcall(lua, nargs, nresults, 0)){
-			fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
-		}
+```c
+int main(int argc, char **argv){
+	lua_State *lua = luaL_newstate();
+	luaL_openlibs(lua);
+
+	// The 2nd parameter is the module name. (Ex: require("debugger") )
+	// The 3rd parameter is the name of a global variable to bind it to, or NULL if you don't want one.
+	// The last two are lua_CFunctions for overriding the I/O functions.
+	// A NULL I/O function  means to use standard input or output respectively.
+	dbg_setup(lua, "debugger", "dbg", NULL, NULL);
+
+	// Load some lua code and prepare to call the MyBuggyFunction() defined below...
+
+	// dbg_pcall() is called exactly like lua_pcall().
+	// Although note that using a custom message handler disables the debugger.
+	if(dbg_pcall(lua, nargs, nresults, 0)){
+		fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
 	}
+}
+```
 
 Now you can go nuts adding all sorts of bugs in your Lua code! When an error occurs inside `dbg_call()` it will automatically load, and connect the debugger on the line of the crash.
 
-	function MyBuggyFunction()
-		-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
-		local enterTheDebuggerREPL = require("debugger");
-		enterTheDebuggerREPL()
-		
-		-- or if you defined a global name, you can use that instead. (highly recommended)
-		dbg()
-		
-		-- When lua is invoked from dbg_pcall() using the default message handler (0),
-		-- errors will cause the debugger to attach automatically! Nice!
-		error()
-		assert(false)
-		(nil)[0]
-	end
+```lua
+function MyBuggyFunction()
+	-- You can either load the debugger module the usual way using the module name passed to dbg_setup()...
+	local enterTheDebuggerREPL = require("debugger");
+	enterTheDebuggerREPL()
+
+	-- or if you defined a global name, you can use that instead. (highly recommended)
+	dbg()
+
+	-- When lua is invoked from dbg_pcall() using the default message handler (0),
+	-- errors will cause the debugger to attach automatically! Nice!
+	error()
+	assert(false)
+	(nil)[0]
+end
+```
 
 Debugger Commands:
 -
