@@ -21,8 +21,6 @@
 	
 	TODO:
 	* Print short function arguments as part of stack location.
-	* Bug: sometimes doesn't advance to next line (same line event reported multiple times).
-	* Do coroutines work as expected?
 ]]
 
 local dbg
@@ -517,13 +515,15 @@ dbg.pp = function(value, depth) dbg_writeln(pretty(value, depth)) end
 
 dbg.auto_where = false
 
+local lua_error, lua_assert = error, assert
+
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
 	dbg_writeln(COLOR_RED.."Debugger stopped on error:"..COLOR_RESET.."(%s)", pretty(err))
 	dbg(false, level)
 	
-	error(err, level)
+	lua_error(err, level)
 end
 
 -- Works like assert(), but invokes the debugger on a failure.
@@ -533,7 +533,7 @@ function dbg.assert(condition, message)
 		dbg(false, 1)
 	end
 	
-	assert(condition, message)
+	lua_assert(condition, message)
 end
 
 -- Works like pcall(), but invokes the debugger on an error.
@@ -548,7 +548,7 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	dbg.write(...)
+	dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(...))
 	dbg(false, 1)
 	
 	return ...
