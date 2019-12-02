@@ -34,7 +34,7 @@ local c_src = [[/*
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "debugger.h"
+#include "debugger_lua.h"
 
 
 static const char *DEBUGGER_SRC = ]]..lua_src..[[;
@@ -117,4 +117,4 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh){
 }
 ]]
 
-io.open("embed/debugger.c", "w"):write(c_src)
+io.open("embed/debugger_lua.c", "w"):write(c_src)
