@@ -419,26 +419,26 @@ end
 
 local last_cmd = false
 
+local commands = {
+	["c"] = function() return true end,
+	["s"] = cmd_step,
+	["n"] = cmd_next,
+	["f"] = cmd_finish,
+	["p (.*)"] = cmd_print,
+	["e (.*)"] = cmd_eval,
+	["u"] = cmd_up,
+	["d"] = cmd_down,
+	["w ?(%d*)"] = cmd_where,
+	["t"] = cmd_trace,
+	["l"] = cmd_locals,
+	["h"] = function() dbg_writeln(help_message); return false end,
+	["q"] = function() dbg.exit(0); return true end,
+}
+
 local function match_command(line)
-	local commands = {
-		["c"] = function() return true end,
-		["s"] = cmd_step,
-		["n"] = cmd_next,
-		["f"] = cmd_finish,
-		["p (.*)"] = cmd_print,
-		["e (.*)"] = cmd_eval,
-		["u"] = cmd_up,
-		["d"] = cmd_down,
-		["w ?(%d*)"] = cmd_where,
-		["t"] = cmd_trace,
-		["l"] = cmd_locals,
-		["h"] = function() dbg_writeln(help_message); return false end,
-		["q"] = function() dbg.exit(0); return true end,
-	}
-	
-	for cmd, cmd_func in pairs(commands) do
-		local matches = {line:match("^("..cmd..")$")}
-		if matches[1] then return cmd_func, select(2, unpack(matches)) end
+	for pat, func in pairs(commands) do
+		local matches = {line:match("^("..pat..")$")}
+		if matches[1] then return func, select(2, unpack(matches)) end
 	end
 end
 
