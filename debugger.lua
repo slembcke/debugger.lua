@@ -520,7 +520,7 @@ local lua_error, lua_assert = error, assert
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
-	dbg_writeln(COLOR_RED.."Debugger stopped on error:"..COLOR_RESET.."(%s)", pretty(err))
+	dbg_writeln(COLOR_RED.."Debugger stopped on error(): "..COLOR_RESET.."%s", pretty(err))
 	dbg(false, level)
 	
 	lua_error(err, level)
@@ -539,7 +539,7 @@ end
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, ...)
 	return xpcall(f, function(err)
-		dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
+		dbg_writeln(COLOR_RED.."Debugger stopped on error in dbg.call(): "..COLOR_RESET..pretty(err))
 		dbg(false, 1)
 		
 		return err
@@ -548,20 +548,14 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(...))
-	dbg(false, 1)
+	if debug.getinfo(2) then
+		dbg_writeln(COLOR_RED.."Debugger attached on error in dbg_call(): "..COLOR_RESET..pretty(...))
+		dbg(false, 1)
+	else
+		dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Error did not occur in Lua code. Execution will continue after dbg_pcall().")
+	end
 	
 	return ...
-end
-
--- Detect Lua version.
-if jit then -- LuaJIT
-	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
-elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
-	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for ".._VERSION..COLOR_RESET)
-else
-	dbg_writeln(COLOR_RED.."debugger.lua: Not tested against ".._VERSION..COLOR_RESET)
-	dbg_writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
 end
 
 -- Assume stdin/out are TTYs unless we can use LuaJIT's FFI to properly check them.
@@ -658,6 +652,16 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 			dbg_writeln(COLOR_RED.."debugger.lua: Readline support enabled."..COLOR_RESET)
 		end
 	end)
+end
+
+-- Detect Lua version.
+if jit then -- LuaJIT
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for "..jit.version)
+elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for ".._VERSION)
+else
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Not tested against ".._VERSION)
+	dbg_writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
 end
 
 return dbg
