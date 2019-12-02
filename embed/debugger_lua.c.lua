@@ -37,7 +37,7 @@ local c_src = [[/*
 #include "debugger_lua.h"
 
 
-static const char *DEBUGGER_SRC = ]]..lua_src..[[;
+static const char DEBUGGER_SRC[] = ]]..lua_src..[[;
 
 
 int luaopen_debugger(lua_State *lua){
