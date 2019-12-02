@@ -21,6 +21,7 @@
 	
 	TODO:
 	* Print short function arguments as part of stack location.
+	* Properly handle being reentrant due to coroutines.
 ]]
 
 local dbg
