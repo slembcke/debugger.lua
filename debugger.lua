@@ -230,12 +230,8 @@ local function compile_chunk(block, env)
 		chunk = load(block, source, "t", env)
 	end
 	
-	if chunk then
-		return chunk
-	else
-		dbg_writeln(COLOR_RED.."Error: Could not compile block:\n"..COLOR_RESET..block)
-		return nil
-	end
+	if not chunk then dbg_writeln(COLOR_RED.."Error: Could not compile block:\n"..COLOR_RESET..block) end
+	return chunk
 end
 
 local SOURCE_CACHE = {["<unknown filename>"] = {}}
@@ -458,9 +454,9 @@ local function run_command(line)
 		last_cmd = line
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
-	end
-	
-	if #line == 1 then
+	elseif dbg.auto_eval then
+		return unpack({cmd_eval(line)})
+	else
 		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
@@ -516,6 +512,7 @@ dbg.pretty = pretty
 dbg.pp = function(value, depth) dbg_writeln(pretty(value, depth)) end
 
 dbg.auto_where = false
+dbg.auto_eval = false
 
 local lua_error, lua_assert = error, assert
 
