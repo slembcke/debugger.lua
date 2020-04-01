@@ -1,5 +1,19 @@
 -- Load up the debugger module and assign it to a variable.
 local dbg = require("debugger")
+
+local input = io.open("/tmp/debugger.lua.in", "r")
+local output = io.open("/tmp/debugger.lua.out", "w")
+
+function dbg.read(prompt)
+	dbg.write(prompt)
+	return input:read()
+end
+
+function dbg.write(str)
+	output:write(str)
+	output:flush()
+end
+
 print()
 
 print[[
