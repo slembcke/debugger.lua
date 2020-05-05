@@ -458,10 +458,8 @@ local function run_command(line)
 		return unpack({command(command_arg)})
 	end
 	
-	if #line == 1 then
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
-		return false
-	end
+	dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
+	return false
 end
 
 repl = function()
