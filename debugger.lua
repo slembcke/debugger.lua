@@ -101,7 +101,8 @@ end
 local function format_stack_frame_info(info)
 	local path = dbg.shorten_path(info.source:sub(2))
 	local fname = (info.name or string.format("<%s:%d>", path, info.linedefined))
-	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in '%s'", path, info.currentline, fname)
+	local namewhat = (info.namewhat == "" and "chunk" or info.namewhat)
+	return string.format(COLOR_BLUE.."%s:%d"..COLOR_RESET.." in %s "..COLOR_BLUE.."%s"..COLOR_RESET, path, info.currentline, namewhat, fname)
 end
 
 local repl
@@ -183,7 +184,7 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
 		if name == var then
-			dbg_writeln(COLOR_RED.."<debugger.lua: set local '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+			dbg_writeln("Set local "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setlocal(level + LUA_JIT_SETLOCAL_WORKAROUND, i, value)
 		end
 		i = i + 1
@@ -194,14 +195,14 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getupvalue(func, i)
 		if name == var then
-			dbg_writeln(COLOR_RED.."<debugger.lua: set upvalue '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+			dbg_writeln("Set upvalue "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setupvalue(func, i, value)
 		end
 		i = i + 1
 	until var == nil end
 	
 	-- Set a global.
-	dbg_writeln(COLOR_RED.."<debugger.lua: set global '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
+	dbg_writeln("Set global "..COLOR_BLUE..name..COLOR_RESET)
 	_G[name] = value
 end
 
@@ -371,15 +372,14 @@ local function cmd_where(context_lines)
 end
 
 local function cmd_trace()
-	local location = format_stack_frame_info(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL))
-	local message = string.format("Inspecting frame: %d - (%s)", stack_inspect_offset - stack_top, location)
-	local str = debug.traceback(message, stack_top + CMD_STACK_LEVEL)
-	
-	-- Iterate the lines of the stack trace so we can number/highlight them.
-	local i = -2
-	for line in str:gmatch("([^\n]+)\n?") do
-		if i >= 0 then line = tostring(i)..line end
-		dbg_writeln((i + stack_top == stack_inspect_offset) and COLOR_BLUE..line..COLOR_RESET or line)
+	dbg_writeln("Inspecting frame %d", stack_inspect_offset - stack_top)
+	local i = 0; while true do
+		local info = debug.getinfo(stack_top + CMD_STACK_LEVEL + i)
+		if not info then break end
+		
+		local is_current_frame = (i + stack_top == stack_inspect_offset)
+		local caret = (is_current_frame and COLOR_GREEN.." => "..COLOR_RESET or "    ")
+		dbg_writeln("% 4d%s%s", i, caret, format_stack_frame_info(info))
 		i = i + 1
 	end
 	
@@ -409,7 +409,7 @@ end
 local function cmd_help()
 	local dash = COLOR_GREEN.." - "..COLOR_RESET
 	dbg_writeln(""
-		.. COLOR_BLUE.."[return]"..dash.."re-run last command\n"
+		.. COLOR_BLUE.."<return>"..dash.."re-run last command\n"
 		.. COLOR_BLUE.."c"..COLOR_GRAY.."(ontinue)"..dash.."continue execution\n"
 		.. COLOR_BLUE.."s"..COLOR_GRAY.."(tep)"..dash.."step forward by one line (into functions)\n"
 		.. COLOR_BLUE.."n"..COLOR_GRAY.."(ext)"..dash.."step forward by one line (skipping over functions)\n"

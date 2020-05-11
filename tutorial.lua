@@ -250,7 +250,7 @@ print[[
 	Last but not least, is the dbg.call() function.
 	It works sort of like Lua's xpcall() function,
 	but starts the debugger when an uncaught error occurs.
-	It you should be able to drop it right in as a replacement.
+	You can pretty much use it as a drop in replacement.
 	
 	For example:
 		dbg.call(function()
