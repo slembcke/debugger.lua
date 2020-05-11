@@ -76,6 +76,9 @@ local stack_top = 0
 -- Changed using the up/down commands
 local stack_inspect_offset = 0
 
+-- LuaJIT has an off by one bug when setting local variables.
+local LUA_JIT_SETLOCAL_WORKAROUND = 0
+
 -- Default dbg.read function
 local function dbg_read(prompt)
 	dbg.write(prompt)
@@ -181,7 +184,7 @@ local function mutate_bindings(_, name, value)
 		local var = debug.getlocal(level, i)
 		if name == var then
 			dbg_writeln(COLOR_RED.."<debugger.lua: set local '"..COLOR_BLUE..name..COLOR_RED.."'>"..COLOR_RESET)
-			return debug.setlocal(level, i, value)
+			return debug.setlocal(level + LUA_JIT_SETLOCAL_WORKAROUND, i, value)
 		end
 		i = i + 1
 	until var == nil end
@@ -561,6 +564,7 @@ end
 
 -- Detect Lua version.
 if jit then -- LuaJIT
+	LUA_JIT_SETLOCAL_WORKAROUND = -1
 	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
 elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
 	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for ".._VERSION..COLOR_RESET)
