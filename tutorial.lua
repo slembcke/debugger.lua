@@ -1,34 +1,38 @@
--- Load up the debugger module and assign it to a variable.
+-- Run this file and follow along with the prompts.
+-- You'll want to keep this file open to follow along.
+
 local dbg = require("debugger")
-print()
 
 print[[
 	Welcome to the interactive debugger.lua tutorial.
 	You'll want to open tutorial.lua in an editor to follow along.
-]]
-
-print[[
-	You are now in the debugger! (Woo! \o/).
-	debugger.lua doesn't support traditional breakpoints.
-	Instead you call the dbg() object to invoke the debugger.
-	Real break points would be better, but this
-	keeps debugger.lua simple and very fast.
 	
-	Notice how it prints out your current file and
-	line as well as which function you are in.
+	First of all, just drop debugger.lua in your project. It's one file.
+	Load it the usual way using require. Ex:
+	local dbg = require("debugger")
+	
+	debugger.lua doesn't support traditional breakpoints.
+	So to get into the debugger, call it like a function.
+	Real breakpoints would be better, but this
+	keeps debugger.lua simple and very fast.
+	At the end you'll find out how to open it automatically on a crash.
+	
+	Notice how debugger.lua prints out your current file and line
+	as well as which function you are in.
 	Keep a close watch on this as you follow along.
 	It should be stopped a line after the dbg() call.
-	(Line 84 unless I forgot to double update it)
+	(Line 86 unless I forgot to double update it)
 	
 	Sometimes functions don't have global names.
-	It might print the method name, local variable
+	It might print the name of a method, local variable
 	that held the function, or file:line where it starts.
 	
-	Type 'w 5' to show 5 lines of surrounding code directly in
-	the debugger. (w = Where) Set dbg.auto_where to a number
-	to run it automatically at each breakpoint.
+	Type 'w' to show 5 lines of surrounding code directly in
+	the debugger. (w = Where) Type 'w 3' to show 3 lines, etc.
+	Alternatively, set dbg.auto_where to a number
+	to run it automatically every time the program advances.
 	
-	Once you've tried the Where command, type 's' to step to
+	Once you've tried the where command, type 's' to step to
 	the next line. (s = Step to the next executable line)
 ]]
 
