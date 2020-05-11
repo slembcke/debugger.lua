@@ -26,7 +26,9 @@
 local dbg
 
 -- Use ANSI color codes in the prompt by default.
+local COLOR_GRAY = ""
 local COLOR_RED = ""
+local COLOR_GREEN = ""
 local COLOR_BLUE = ""
 local COLOR_RESET = ""
 
@@ -61,22 +63,6 @@ local function pretty(obj, max_depth)
 	
 	return recurse(obj, 0)
 end
-
-local help_message = [[
-[return] - re-run last command
-c(ontinue) - continue execution
-s(tep) - step forward by one line (into functions)
-n(ext) - step forward by one line (skipping over functions)
-f(inish) - step forward until exiting the current function
-u(p) - move up the stack by one frame
-d(own) - move down the stack by one frame
-w(here) [line count] - print source code around the current line
-e(val) [statement] - execute the statement
-p(rint) [expression] - execute the expression and print the result
-t(race) - print the stack trace
-l(ocals) - print the function arguments, locals and upvalues.
-h(elp) - print this message
-q(uit) - halt execution]]
 
 -- The stack level that cmd_* functions use to access locals or info
 -- The structure of the code very carefully ensures this.
@@ -417,6 +403,27 @@ local function cmd_locals()
 	return false
 end
 
+local function cmd_help()
+	local dash = COLOR_GREEN.." - "..COLOR_RESET
+	dbg_writeln(""
+		.. COLOR_BLUE.."[return]"..dash.."re-run last command\n"
+		.. COLOR_BLUE.."c"..COLOR_GRAY.."(ontinue)"..dash.."continue execution\n"
+		.. COLOR_BLUE.."s"..COLOR_GRAY.."(tep)"..dash.."step forward by one line (into functions)\n"
+		.. COLOR_BLUE.."n"..COLOR_GRAY.."(ext)"..dash.."step forward by one line (skipping over functions)\n"
+		.. COLOR_BLUE.."f"..COLOR_GRAY.."(inish)"..dash.."step forward until exiting the current function\n"
+		.. COLOR_BLUE.."u"..COLOR_GRAY.."(p)"..dash.."move up the stack by one frame\n"
+		.. COLOR_BLUE.."d"..COLOR_GRAY.."(own)"..dash.."move down the stack by one frame\n"
+		.. COLOR_BLUE.."w"..COLOR_GRAY.."(here) "..COLOR_BLUE.."[line count]"..dash.."print source code around the current line\n"
+		.. COLOR_BLUE.."e"..COLOR_GRAY.."(val) "..COLOR_BLUE.."[statement]"..dash.."execute the statement\n"
+		.. COLOR_BLUE.."p"..COLOR_GRAY.."(rint) "..COLOR_BLUE.."[expression]"..dash.."execute the expression and print the result\n"
+		.. COLOR_BLUE.."t"..COLOR_GRAY.."(race)"..dash.."print the stack trace\n"
+		.. COLOR_BLUE.."l"..COLOR_GRAY.."(ocals)"..dash.."print the function arguments, locals and upvalues.\n"
+		.. COLOR_BLUE.."h"..COLOR_GRAY.."(elp)"..dash.."print this message\n"
+		.. COLOR_BLUE.."q"..COLOR_GRAY.."(uit)"..dash.."halt execution\n"
+	)
+	return false
+end
+
 local last_cmd = false
 
 local function match_command(line)
@@ -432,7 +439,7 @@ local function match_command(line)
 		["w ?(%d*)"] = cmd_where,
 		["t"] = cmd_trace,
 		["l"] = cmd_locals,
-		["h"] = function() dbg_writeln(help_message); return false end,
+		["h"] = cmd_help,
 		["q"] = function() dbg.exit(0); return true end,
 	}
 	
@@ -456,9 +463,7 @@ local function run_command(line)
 		last_cmd = line
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
-	end
-	
-	if #line == 1 then
+	else
 		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
