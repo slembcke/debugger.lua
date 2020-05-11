@@ -320,7 +320,7 @@ local function cmd_eval(code)
 	return false
 end
 
-local function cmd_up()
+local function cmd_down()
 	local offset = stack_inspect_offset
 	local info
 	
@@ -333,7 +333,7 @@ local function cmd_up()
 		stack_inspect_offset = offset
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-		dbg_writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
+		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
 	end
 	
 	dbg_writeln("Inspecting frame: "..format_stack_frame_info(info))
@@ -342,7 +342,7 @@ local function cmd_up()
 	return false
 end
 
-local function cmd_down()
+local function cmd_up()
 	local offset = stack_inspect_offset
 	local info
 	
@@ -356,7 +356,7 @@ local function cmd_down()
 		stack_inspect_offset = offset
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
+		dbg_writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
 	end
 	
 	dbg_writeln("Inspecting frame: "..format_stack_frame_info(info))
