@@ -18,7 +18,7 @@ print[[
 	line as well as which function you are in.
 	Keep a close watch on this as you follow along.
 	It should be stopped a line after the dbg() call.
-	(Line 84 unless I forgot to double check it)
+	(Line 84 unless I forgot to double update it)
 	
 	Sometimes functions don't have global names.
 	It might print the method name, local variable
@@ -90,7 +90,7 @@ func2()
 
 local function func3()
 	print[[
-	You are now sitting at a breakpoint inside of a func3().
+	You are now sitting at a breakpoint inside of func3().
 	Let's say you got here by stepping into the function.
 	After poking around for a bit, you just want to step until the
 	function returns, but don't want to
@@ -250,12 +250,12 @@ print[[
 	Last but not least, is the dbg.call() function.
 	It works sort of like Lua's xpcall() function,
 	but starts the debugger when an uncaught error occurs.
-	Note that dbg.call() does *not* take a list of varargs though.
-	You must call it on a function that takes no arguments.
+	It you should be able to drop it right in as a replacement.
 	
-	dbg.call(function()
-		-- Potentially buggy code goes here.
-	end)
+	For example:
+		dbg.call(function()
+			-- Potentially buggy code goes here.
+		end)
 	
 	Wrap it around your program's main loop or main entry point.
 	Then when your program crashes, you won't need to go back

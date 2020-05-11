@@ -259,7 +259,7 @@ function where(info, context_lines)
 		for i = info.currentline - context_lines, info.currentline + context_lines do
 			local caret = (i == info.currentline and " => " or "    ")
 			local line = source[i]
-			if line then dbg_writeln(COLOR_BLUE.."%d"..COLOR_RED.."%s"..COLOR_RESET.."%s", i, caret, line) end
+			if line then dbg_writeln(COLOR_GRAY.."% 4d"..COLOR_GREEN.."%s"..COLOR_RESET.."%s", i, caret, line) end
 		end
 	else
 		dbg_writeln(COLOR_RED.."Error: Source file '%s' not found.", info.source);
@@ -306,7 +306,7 @@ local function cmd_print(expr)
 		end
 		
 		if output == "" then output = "<no result>" end
-		dbg_writeln(COLOR_BLUE..expr..COLOR_RED.." => "..COLOR_RESET..output)
+		dbg_writeln(COLOR_BLUE..expr..COLOR_GREEN.." => "..COLOR_RESET..output)
 	end
 	
 	return false
@@ -410,7 +410,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, "(*internal)" values, and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and not k:match("%(.*%)") then
-			dbg_writeln("\t"..COLOR_BLUE.."%s "..COLOR_RED.."=>"..COLOR_RESET.." %s", k, pretty(v))
+			dbg_writeln("  "..COLOR_BLUE.."%s "..COLOR_GREEN.."=>"..COLOR_RESET.." %s", k, pretty(v))
 		end
 	end
 	
@@ -593,8 +593,10 @@ end
 -- Conditionally enable color support.
 local color_maybe_supported = (stdout_isatty and os.getenv("TERM") and os.getenv("TERM") ~= "dumb")
 if color_maybe_supported and not os.getenv("DBG_NOCOLOR") then
-	COLOR_RED = string.char(27) .. "[31m"
-	COLOR_BLUE = string.char(27) .. "[34m"
+	COLOR_GRAY = string.char(27) .. "[90m"
+	COLOR_RED = string.char(27) .. "[91m"
+	COLOR_GREEN = string.char(27) .. "[92m"
+	COLOR_BLUE = string.char(27) .. "[94m"
 	COLOR_RESET = string.char(27) .. "[0m"
 end
 
