@@ -100,12 +100,12 @@ local function dbg_writeln(str, ...)
 	end
 end
 
-local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":"..COLOR_YELLOW..tostring(line)..COLOR_RESET end
+local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":"..COLOR_YELLOW..line..COLOR_RESET end
 local function format_stack_frame_info(info)
 	local path = dbg.shorten_path(info.source:sub(2))
-	local fname = (info.name or "<"..format_loc(path, info.linedefined)..">")
-	local namewhat = (info.namewhat == "" and "chunk" or info.namewhat)
-	return format_loc(path, info.currentline).." in "..namewhat.." "..fname..COLOR_RESET
+	local fname = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or format_loc(path, info.linedefined))
+	local namewhat = (info.namewhat == "" and "chunk at" or info.namewhat)
+	return format_loc(path, info.currentline).." in "..namewhat.." "..fname
 end
 
 local repl
@@ -335,7 +335,7 @@ local function cmd_down()
 		if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-		dbg_writeln(COLOR_BLUE.."Already at the bottom of the stack."..COLOR_RESET)
+		dbg_writeln("Already at the bottom of the stack.")
 	end
 	
 	return false
@@ -357,7 +357,7 @@ local function cmd_up()
 		if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
-		dbg_writeln(COLOR_BLUE.."Already at the top of the stack."..COLOR_RESET)
+		dbg_writeln("Already at the top of the stack.")
 	end
 	
 	return false
