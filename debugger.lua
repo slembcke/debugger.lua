@@ -184,7 +184,7 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
 		if name == var then
-			dbg_writeln("Set local "..COLOR_BLUE..name..COLOR_RESET)
+			dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set local "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setlocal(level + LUA_JIT_SETLOCAL_WORKAROUND, i, value)
 		end
 		i = i + 1
@@ -195,14 +195,14 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getupvalue(func, i)
 		if name == var then
-			dbg_writeln("Set upvalue "..COLOR_BLUE..name..COLOR_RESET)
+			dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set upvalue "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setupvalue(func, i, value)
 		end
 		i = i + 1
 	until var == nil end
 	
 	-- Set a global.
-	dbg_writeln("Set global "..COLOR_BLUE..name..COLOR_RESET)
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set global "..COLOR_BLUE..name..COLOR_RESET)
 	_G[name] = value
 end
 

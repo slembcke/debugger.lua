@@ -94,38 +94,38 @@ function module.run_test(test, test_body)
 end
 
 function module.step()
-	expect "test.lua:8 in 'func1'"; cmd "s"
-	expect "test.lua:12 in 'func2'"; cmd "s"
-	expect "test.lua:13 in 'func2'"; cmd "s"
-	expect "test.lua:17 in 'func3'"; cmd "s"
-	expect "test.lua:4 in 'do_nothing'"; cmd "s"
-	expect "test.lua:18 in 'func3'"; cmd "s"
-	expect "test.lua:22 in 'test_body'"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "s"
+	expect "test.lua:12 in upvalue func2"; cmd "s"
+	expect "test.lua:13 in upvalue func2"; cmd "s"
+	expect "test.lua:17 in upvalue func3"; cmd "s"
+	expect "test.lua:4 in upvalue do_nothing"; cmd "s"
+	expect "test.lua:18 in upvalue func3"; cmd "s"
+	expect "test.lua:22 in local test_body"; cmd "c"
 	print_green "STEP TESTS COMPLETE"
 end
 
 function module.next()
-	expect "test.lua:8 in 'func1'"; cmd "n"
-	expect "test.lua:12 in 'func2'"; cmd "n"
-	expect "test.lua:13 in 'func2'"; cmd "n"
-	expect "test.lua:17 in 'func3'"; cmd "n"
-	expect "test.lua:18 in 'func3'"; cmd "n"
-	expect "test.lua:26 in 'test_body'"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "n"
+	expect "test.lua:12 in upvalue func2"; cmd "n"
+	expect "test.lua:13 in upvalue func2"; cmd "n"
+	expect "test.lua:17 in upvalue func3"; cmd "n"
+	expect "test.lua:18 in upvalue func3"; cmd "n"
+	expect "test.lua:26 in local test_body"; cmd "c"
 	print_green "NEXT TESTS COMPLETE"
 end
 
 function module.finish()
-	expect "test.lua:8 in 'func1'"; cmd "f"
-	expect "test.lua:12 in 'func2'"; cmd "f"
-	expect "test.lua:17 in 'func3'"; cmd "f"
-	expect "test.lua:30 in 'test_body'"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "f"
+	expect "test.lua:12 in upvalue func2"; cmd "f"
+	expect "test.lua:17 in upvalue func3"; cmd "f"
+	expect "test.lua:30 in local test_body"; cmd "c"
 	print_green "FINISH TESTS COMPLETE"
 end
 
 function module.continue()
-	expect "test.lua:8 in 'func1'"; cmd "c"
-	expect "test.lua:8 in 'func1'"; cmd "c"
-	expect "test.lua:8 in 'func1'"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "c"
+	expect "test.lua:8 in upvalue func1"; cmd "c"
 	print_green "CONTINUE TESTS COMPLETE"
 end
 
@@ -133,15 +133,14 @@ function module.trace()
 	ignore(); -- Stack frame info that will be in the trace anyway.
 	
 	cmd "t"
-	expect "Inspecting frame: 0 - (test.lua:8 in 'func1')"
-	expect "stack traceback:"
-	expect_match "0\ttest%.lua:8: in %a+ 'func1'"
-	expect_match "1\ttest%.lua:11: in %a+ 'func2'"
-	expect_match "2\ttest%.lua:16: in %a+ 'func3'"
-	expect_match "3\ttest%.lua:39: in %a+ 'test_body'"
-	expect_match "4\t./test_util%.lua:%d+: in function '.*run_test'"
-	expect "5\ttest.lua:38: in main chunk"
-	expect_match "6\t%[C%]:.*"
+	expect "Inspecting frame 0"
+	expect "0 => test.lua:8 in upvalue func1"
+	expect "1    test.lua:11 in upvalue func2"
+	expect "2    test.lua:16 in upvalue func3"
+	expect "3    test.lua:39 in local test_body"
+	expect_match "4    ./test_util%.lua:%d+ in field run_test"
+	expect "5    test.lua:38 in chunk <test.lua:0>"
+	expect "6    [C]:-1 in chunk <[C]:-1>"
 	
 	cmd "c"
 	print_green "TRACE TESTS COMPLETE"
@@ -150,28 +149,28 @@ end
 function module.updown()
 	ignore();
 	
-	cmd "d"
-	expect "Already at the bottom of the stack."
-	expect "Inspecting frame: test.lua:8 in 'func1'"
-	
-	cmd "u"
-	expect "Inspecting frame: test.lua:11 in 'func2'"
-	
-	cmd "u"
-	expect "Inspecting frame: test.lua:16 in 'func3'"
-	
-	cmd "u"
-	expect "Inspecting frame: test.lua:43 in 'test_body'"
-	
-	cmd "u"
-	expect_match "Inspecting frame: %./test_util%.lua:%d+ in 'run_test'"
-	
-	cmd "u"
-	expect "Inspecting frame: test.lua:42 in '<test.lua:0>'"
-	
 	cmd "u"
 	expect "Already at the top of the stack."
-	expect "Inspecting frame: test.lua:42 in '<test.lua:0>'"
+	expect "Inspecting frame: test.lua:8 in upvalue func1"
+	
+	cmd "d"
+	expect "Inspecting frame: test.lua:11 in upvalue func2"
+	
+	cmd "d"
+	expect "Inspecting frame: test.lua:16 in upvalue func3"
+	
+	cmd "d"
+	expect "Inspecting frame: test.lua:43 in local test_body"
+	
+	cmd "d"
+	expect_match "Inspecting frame: %./test_util%.lua:%d+ in field run_test"
+	
+	cmd "d"
+	expect "Inspecting frame: test.lua:42 in chunk <test.lua:0>"
+	
+	cmd "d"
+	expect "Already at the bottom of the stack."
+	expect "Inspecting frame: test.lua:42 in chunk <test.lua:0>"
 	
 	cmd "c"
 	print_green "UP/DOWN TESTES COMPLETE"
@@ -198,13 +197,13 @@ end
 
 function module.eval()
 	ignore(); cmd "e var = true"
-	expect "<debugger.lua: set local 'var'>"; cmd "c"
+	expect "debugger.lua: Set local var"; cmd "c"
 	
 	ignore(); cmd "e upvar = true"
-	expect "<debugger.lua: set upvalue 'upvar'>"; cmd "c"
+	expect "debugger.lua: Set upvalue upvar"; cmd "c"
 	
 	ignore(); cmd "e GLOBAL = true"
-	expect "<debugger.lua: set global 'GLOBAL'>"; cmd "c"
+	expect "debugger.lua: Set global GLOBAL"; cmd "c"
 	
 	print_green "EVAL TESTS COMPLETE"
 end
