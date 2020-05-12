@@ -34,17 +34,20 @@ local c_src = [[/*
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "debugger.h"
+#include "debugger_lua.h"
 
 
-static const char *DEBUGGER_SRC = ]]..lua_src..[[;
+static const char DEBUGGER_SRC[] = ]]..lua_src..[[;
 
 
 int luaopen_debugger(lua_State *lua){
-	if(luaL_dostring(lua, DEBUGGER_SRC)) lua_error(lua);
+	if(
+		luaL_loadbufferx(lua, DEBUGGER_SRC, sizeof(DEBUGGER_SRC) - 1, "<debugger.lua>", NULL) ||
+		lua_pcall(lua, 0, LUA_MULTRET, 0)
+	) lua_error(lua);
 	
 	// Or you could load it from disk:
-//	if(luaL_dostring(lua, "return require('debugger')")) lua_error(lua);
+	// if(luaL_dofile(lua, "debugger.lua")) lua_error(lua);
 	
 	return 1;
 }
@@ -71,12 +74,12 @@ void dbg_setup(lua_State *lua, const char *name, const char *globalName, lua_CFu
 	
 	if(readFunc){
 		lua_pushcfunction(lua, readFunc);
-		lua_setfield(lua, -1, "read");
+		lua_setfield(lua, -2, "read");
 	}
 	
 	if(writeFunc){
 		lua_pushcfunction(lua, writeFunc);
-		lua_setfield(lua, -1, "write");
+		lua_setfield(lua, -2, "write");
 	}
 	
 	if(globalName){
@@ -90,9 +93,9 @@ void dbg_setup_default(lua_State *lua){
 	dbg_setup(lua, "debugger", "dbg", NULL, NULL);
 }
 
-int dbg_pcall(lua_State *lua, int nargs, int nresults, int _msgh){
+int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh){
 	// Call regular lua_pcall() if a message handler is provided.
-	if(_msgh) return lua_pcall(lua, nargs, nresults, _msgh);
+	if(msgh) return lua_pcall(lua, nargs, nresults, msgh);
 	
 	// Grab the msgh function out of the registry.
 	lua_getfield(lua, LUA_REGISTRYINDEX, MSGH);
@@ -101,17 +104,17 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int _msgh){
 	}
 	
 	// Move the error handler just below the function.
-	const int msgh = -(nargs + 2);
+	msgh = lua_gettop(lua) - (1 + nargs);
 	lua_insert(lua, msgh);
 	
 	// Call the function.
 	int err = lua_pcall(lua, nargs, nresults, msgh);
 	
 	// Remove the debug handler.
-	lua_remove(lua, -(nresults + 1));
+	lua_remove(lua, msgh);
 	
 	return err;
 }
 ]]
 
-io.open("embed/debugger.c", "w"):write(c_src)
+io.open("embed/debugger_lua.c", "w"):write(c_src)

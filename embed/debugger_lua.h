@@ -79,6 +79,8 @@ void dbg_setup_default(lua_State *lua);
 // Drop in replacement for lua_pcall() that attaches the debugger on an error if 'msgh' is 0.
 int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh);
 
+#define dbg_dofile(lua, filename) (luaL_loadfile(lua, filename) || dbg_pcall(lua, 0, LUA_MULTRET, 0))
+
 #ifdef __cplusplus
 }
 #endif

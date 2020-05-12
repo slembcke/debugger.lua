@@ -21,6 +21,7 @@
 	
 	TODO:
 	* Print short function arguments as part of stack location.
+	* Properly handle being reentrant due to coroutines.
 ]]
 
 local dbg
@@ -221,12 +222,8 @@ local function compile_chunk(block, env)
 		chunk = load(block, source, "t", env)
 	end
 	
-	if chunk then
-		return chunk
-	else
-		dbg_writeln(COLOR_RED.."Error: Could not compile block:\n"..COLOR_RESET..block)
-		return nil
-	end
+	if not chunk then dbg_writeln(COLOR_RED.."Error: Could not compile block:\n"..COLOR_RESET..block) end
+	return chunk
 end
 
 local SOURCE_CACHE = {["<unknown filename>"] = {}}
@@ -428,26 +425,26 @@ end
 
 local last_cmd = false
 
+local commands = {
+	["^c$"] = function() return true end,
+	["^s$"] = cmd_step,
+	["^n$"] = cmd_next,
+	["^f$"] = cmd_finish,
+	["^p%s+(.*)$"] = cmd_print,
+	["^e%s+(.*)$"] = cmd_eval,
+	["^u$"] = cmd_up,
+	["^d$"] = cmd_down,
+	["^w%s*(%d*)$"] = cmd_where,
+	["^t$"] = cmd_trace,
+	["^l$"] = cmd_locals,
+	["^h$"] = cmd_help,
+	["^q$"] = function() dbg.exit(0); return true end,
+}
+
 local function match_command(line)
-	local commands = {
-		["c"] = function() return true end,
-		["s"] = cmd_step,
-		["n"] = cmd_next,
-		["f"] = cmd_finish,
-		["p (.*)"] = cmd_print,
-		["e (.*)"] = cmd_eval,
-		["u"] = cmd_up,
-		["d"] = cmd_down,
-		["w ?(%d*)"] = cmd_where,
-		["t"] = cmd_trace,
-		["l"] = cmd_locals,
-		["h"] = cmd_help,
-		["q"] = function() dbg.exit(0); return true end,
-	}
-	
-	for cmd, cmd_func in pairs(commands) do
-		local matches = {line:match("^("..cmd..")$")}
-		if matches[1] then return cmd_func, select(2, unpack(matches)) end
+	for pat, func in pairs(commands) do
+		-- Return the matching command and capture argument.
+		if line:find(pat) then return func, line:match(pat) end
 	end
 end
 
@@ -465,8 +462,10 @@ local function run_command(line)
 		last_cmd = line
 		-- unpack({...}) prevents tail call elimination so the stack frame indices are predictable.
 		return unpack({command(command_arg)})
+	elseif dbg.auto_eval then
+		return unpack({cmd_eval(line)})
 	else
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command "..line.." not recognized.\nType 'h' and press return for a command list.")
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." command '%s' not recognized.\nType 'h' and press return for a command list.", line)
 		return false
 	end
 end
@@ -521,13 +520,14 @@ dbg.pretty = pretty
 dbg.pp = function(value, depth) dbg_writeln(pretty(value, depth)) end
 
 dbg.auto_where = false
+dbg.auto_eval = false
 
 local lua_error, lua_assert = error, assert
 
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
-	dbg_writeln(COLOR_RED.."Debugger stopped on error:"..COLOR_RESET..pretty(err))
+	dbg_writeln(COLOR_RED.."Debugger stopped on error(): "..COLOR_RESET..pretty(err))
 	dbg(false, level)
 	
 	lua_error(err, level)
@@ -546,7 +546,7 @@ end
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, ...)
 	return xpcall(f, function(err)
-		dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(err))
+		dbg_writeln(COLOR_RED.."Debugger stopped on error in dbg.call(): "..COLOR_RESET..pretty(err))
 		dbg(false, 1)
 		
 		return err
@@ -555,21 +555,14 @@ end
 
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
-	dbg_writeln(COLOR_RED.."Debugger stopped on error: "..COLOR_RESET..pretty(...))
-	dbg(false, 1)
+	if debug.getinfo(2) then
+		dbg_writeln(COLOR_RED.."Debugger attached on error in dbg_call(): "..COLOR_RESET..pretty(...))
+		dbg(false, 1)
+	else
+		dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Error did not occur in Lua code. Execution will continue after dbg_pcall().")
+	end
 	
 	return ...
-end
-
--- Detect Lua version.
-if jit then -- LuaJIT
-	LUA_JIT_SETLOCAL_WORKAROUND = -1
-	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for "..jit.version..COLOR_RESET)
-elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
-	dbg_writeln(COLOR_RED.."debugger.lua: Loaded for ".._VERSION..COLOR_RESET)
-else
-	dbg_writeln(COLOR_RED.."debugger.lua: Not tested against ".._VERSION..COLOR_RESET)
-	dbg_writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
 end
 
 -- Assume stdin/out are TTYs unless we can use LuaJIT's FFI to properly check them.
@@ -669,6 +662,17 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 			dbg_writeln(COLOR_RED.."debugger.lua: Readline support enabled."..COLOR_RESET)
 		end
 	end)
+end
+
+-- Detect Lua version.
+if jit then -- LuaJIT
+	LUA_JIT_SETLOCAL_WORKAROUND = -1
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for "..jit.version)
+elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for ".._VERSION)
+else
+	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Not tested against ".._VERSION)
+	dbg_writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
 end
 
 return dbg
