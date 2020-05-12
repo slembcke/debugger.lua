@@ -151,7 +151,6 @@ function module.updown()
 	
 	cmd "u"
 	expect "Already at the top of the stack."
-	expect "Inspecting frame: test.lua:8 in upvalue func1"
 	
 	cmd "d"
 	expect "Inspecting frame: test.lua:11 in upvalue func2"
@@ -170,7 +169,6 @@ function module.updown()
 	
 	cmd "d"
 	expect "Already at the bottom of the stack."
-	expect "Inspecting frame: test.lua:42 in chunk <test.lua:0>"
 	
 	cmd "c"
 	print_green "UP/DOWN TESTES COMPLETE"

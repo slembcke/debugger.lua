@@ -399,7 +399,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, "(*internal)" values, and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and not k:match("%(.*%)") then
-			dbg_writeln("  "..COLOR_BLUE..k.. GREEN_CARET.." "..pretty(v))
+			dbg_writeln("  "..COLOR_BLUE..k.. GREEN_CARET..pretty(v))
 		end
 	end
 	
