@@ -21,6 +21,8 @@ Features
 - IO can easily be remapped to a socket or window by overwriting the <code>dbg.write()</code> and <code>dbg.read()</code> functions.
 - Permissive MIT license.
 
+![ExampleLog](files.slembcke.net/temp/debugger_lua.png)
+
 How to Use it:
 -
 
