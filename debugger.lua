@@ -103,8 +103,8 @@ local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":".
 local function format_stack_frame_info(info)
 	local path = dbg.shorten_path(info.source:sub(2))
 	local fname = (info.name or "<"..format_loc(path, info.linedefined)..">")
-	local namewhat = (info.namewhat == "" and " chunk " or info.namewhat)
-	return format_loc(path, info.currentline).." in "..namewhat.." "..COLOR_BLUE..fname..COLOR_RESET
+	local namewhat = (info.namewhat == "" and "chunk" or info.namewhat)
+	return format_loc(path, info.currentline).." in "..namewhat.." "..fname..COLOR_RESET
 end
 
 local repl
