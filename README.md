@@ -136,8 +136,9 @@ Extras
 There are several overloadable functions you can use to customize debugger.lua.
 * `dbg.read(prompt)` - Show the prompt and block for user input. (Defaults to read from stdin)
 * `dbg.write(str)` - Write a string to the output. (Defaults to write to stdout)
-* `dbg.shorten_path(path)` - Return a shortened version of a path. (Defaults to nothing)
+* `dbg.shorten_path(path)` - Return a shortened version of a path. (Defaults to simply return `path`)
 * `dbg.exit(err)` - Stop debugging. (Defaults to `os.exit(err)`)
+
 Using these you can customize the debugger to work in your environment. For instance, you can divert the I/O over a network socket or to a GUI window.
 
 There are also some goodies you can use to make debugging easier.
@@ -167,7 +168,7 @@ Known Issues:
 License:
 -
 
-	Copyright (c) 2016 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2020 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
