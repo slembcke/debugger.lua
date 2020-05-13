@@ -1,5 +1,5 @@
 --[[
-	Copyright (c) 2016 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2020 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -102,10 +102,11 @@ end
 
 local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":"..COLOR_YELLOW..line..COLOR_RESET end
 local function format_stack_frame_info(info)
-	local path = dbg.shorten_path(info.source:sub(2))
-	local fname = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or format_loc(path, info.linedefined))
+	local filename = info.source:match("@(.*)")
+	local source = filename and dbg.shorten_path(filename) or info.short_src
 	local namewhat = (info.namewhat == "" and "chunk at" or info.namewhat)
-	return format_loc(path, info.currentline).." in "..namewhat.." "..fname
+	local name = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or format_loc(source, info.linedefined))
+	return format_loc(source, info.currentline).." in "..namewhat.." "..name
 end
 
 local repl
@@ -226,32 +227,29 @@ local function compile_chunk(block, env)
 	return chunk
 end
 
-local SOURCE_CACHE = {["<unknown filename>"] = {}}
+local SOURCE_CACHE = {}
 
 function where(info, context_lines)
-	local key = info.source or "<unknown filename>"
-	local source = SOURCE_CACHE[key]
-	
+	local source = SOURCE_CACHE[info.source]
 	if not source then
 		source = {}
 		local filename = info.source:match("@(.*)")
 		if filename then
 			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
-		else
+		elseif info.source then
 			for line in info.source:gmatch("(.-)\n") do table.insert(source, line) end
 		end
-		
-		SOURCE_CACHE[key] = source
+		SOURCE_CACHE[info.source] = source
 	end
 	
-	if source[info.currentline] then
+	if source and source[info.currentline] then
 		for i = info.currentline - context_lines, info.currentline + context_lines do
 			local GREEN_CARET = (i == info.currentline and  GREEN_CARET or "    ")
 			local line = source[i]
 			if line then dbg_writeln(COLOR_GRAY.."% 4d"..GREEN_CARET..line, i) end
 		end
 	else
-		dbg_writeln(COLOR_RED.."Error: Source file '%s' not found.", info.source);
+		dbg_writeln(COLOR_RED.."Error: Source not available for "..COLOR_BLUE..info.short_src);
 	end
 	
 	return false
