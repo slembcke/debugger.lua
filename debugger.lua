@@ -246,7 +246,7 @@ function where(info, context_lines)
 		for i = info.currentline - context_lines, info.currentline + context_lines do
 			local GREEN_CARET = (i == info.currentline and  GREEN_CARET or "    ")
 			local line = source[i]
-			if line then dbg_writeln(COLOR_GRAY.."% 4d"..GREEN_CARET..line, i) end
+			if line then dbg_writeln(COLOR_GRAY.."% 4d"..GREEN_CARET.."%s", i, line) end
 		end
 	else
 		dbg_writeln(COLOR_RED.."Error: Source not available for "..COLOR_BLUE..info.short_src);
@@ -374,7 +374,7 @@ local function cmd_trace()
 		
 		local is_current_frame = (i + stack_top == stack_inspect_offset)
 		local GREEN_CARET = (is_current_frame and  GREEN_CARET or "    ")
-		dbg_writeln(COLOR_GRAY.."% 4d"..COLOR_RESET..GREEN_CARET..format_stack_frame_info(info), i)
+		dbg_writeln(COLOR_GRAY.."% 4d"..COLOR_RESET..GREEN_CARET.."%s", i, format_stack_frame_info(info))
 		i = i + 1
 	end
 	
