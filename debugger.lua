@@ -666,7 +666,7 @@ end
 if jit then -- LuaJIT
 	LUA_JIT_SETLOCAL_WORKAROUND = -1
 	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for "..jit.version)
-elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.3" then
+elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.4" then
 	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for ".._VERSION)
 else
 	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Not tested against ".._VERSION)
