@@ -84,6 +84,7 @@ local LUA_JIT_SETLOCAL_WORKAROUND = 0
 -- Default dbg.read function
 local function dbg_read(prompt)
 	dbg.write(prompt)
+	io.flush()
 	return io.read()
 end
 
