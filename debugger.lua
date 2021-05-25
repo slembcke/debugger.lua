@@ -313,7 +313,7 @@ local function cmd_eval(code)
 	-- Call the chunk and collect the results.
 	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
 	if not success then
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." "..err)
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." "..tostring(err))
 	end
 	
 	return false
