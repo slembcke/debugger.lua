@@ -539,7 +539,7 @@ function dbg.assert(condition, message)
 		dbg(false, 1)
 	end
 	
-	lua_assert(condition, message)
+	return lua_assert(condition, message)
 end
 
 -- Works like pcall(), but invokes the debugger on an error.
