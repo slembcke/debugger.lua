@@ -84,6 +84,7 @@ local LUA_JIT_SETLOCAL_WORKAROUND = 0
 -- Default dbg.read function
 local function dbg_read(prompt)
 	dbg.write(prompt)
+	io.flush()
 	return io.read()
 end
 
@@ -312,7 +313,7 @@ local function cmd_eval(code)
 	-- Call the chunk and collect the results.
 	local success, err = pcall(chunk, unpack(rawget(env, "...") or {}))
 	if not success then
-		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." "..err)
+		dbg_writeln(COLOR_RED.."Error:"..COLOR_RESET.." "..tostring(err))
 	end
 	
 	return false
@@ -538,7 +539,7 @@ function dbg.assert(condition, message)
 		dbg(false, 1)
 	end
 	
-	lua_assert(condition, message)
+	return lua_assert(condition, message)
 end
 
 -- Works like pcall(), but invokes the debugger on an error.
