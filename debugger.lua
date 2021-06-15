@@ -494,13 +494,14 @@ end
 
 -- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
-	__call = function(self, condition, top_offset)
+	__call = function(self, condition, top_offset, source)
 		if condition then return end
 		
 		top_offset = (top_offset or 0)
 		stack_inspect_offset = top_offset
 		stack_top = top_offset
 		
+		dbg.write(COLOR_YELLOW.."break via "..(source or "dbg()")..COLOR_RESET..GREEN_CARET)
 		debug.sethook(hook_next(1), "crl")
 		return
 	end,
@@ -527,7 +528,7 @@ local lua_error, lua_assert = error, assert
 function dbg.error(err, level)
 	level = level or 1
 	dbg_writeln(COLOR_RED.."Debugger stopped on error(): "..COLOR_RESET..pretty(err))
-	dbg(false, level)
+	dbg(false, level, "dbg.error()")
 	
 	lua_error(err, level)
 end
@@ -536,7 +537,7 @@ end
 function dbg.assert(condition, message)
 	if not condition then
 		dbg_writeln(COLOR_RED.."Debugger stopped on assert:"..COLOR_RESET..message)
-		dbg(false, 1)
+		dbg(false, 1, "dbg.assert()")
 	end
 	
 	return lua_assert(condition, message)
@@ -546,7 +547,7 @@ end
 function dbg.call(f, ...)
 	return xpcall(f, function(err)
 		dbg_writeln(COLOR_RED.."Debugger stopped on error in dbg.call(): "..COLOR_RESET..pretty(err))
-		dbg(false, 1)
+		dbg(false, 1, "dbg.call()")
 		
 		return err
 	end, ...)
@@ -556,7 +557,7 @@ end
 function dbg.msgh(...)
 	if debug.getinfo(2) then
 		dbg_writeln(COLOR_RED.."Debugger attached on error in dbg_call(): "..COLOR_RESET..pretty(...))
-		dbg(false, 1)
+		dbg(false, 1, "dbg.msgh()")
 	else
 		dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Error did not occur in Lua code. Execution will continue after dbg_pcall().")
 	end
