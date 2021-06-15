@@ -3,7 +3,7 @@ debugger.lua
 
 A simple, highly embedabble CLI debugger for Lua 5.x, and LuaJIT 2.0.
 
-![ExampleLog](https://raw.githubusercontent.com/slembcke/debugger.lua/b658e34e6bb9ec9af8429256be8c238d2d0ee652/debugger_lua.png)
+![ExampleLog](https://raw.githubusercontent.com/slembcke/debugger.lua/ec29cc13224750d109383c949950d7cafd6fcbdf/debugger_lua.png)
 
 debugger.lua is a simple, single file, pure Lua debugger that is easy to integrate with any project. The lua-users wiki lists a [number of debuggers](http://lua-users.org/wiki/DebuggingLuaCode). clidebugger was closest to what I was looking for, but I ran into several compatibility issues, and the rest are pretty big libraries with a whole lot of dependencies. I just wanted something simple to integrate that would work through stdin/stdout. I also decided that it sounded fun to try and make my own!
 
