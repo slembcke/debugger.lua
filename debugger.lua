@@ -117,7 +117,7 @@ local repl
 local function frame_has_line(info) return info.currentline >= 0 end
 
 local function hook_factory(repl_threshold)
-	return function(offset)
+	return function(offset, reason)
 		return function(event, _)
 			-- Skip events that don't have line information.
 			if not frame_has_line(debug.getinfo(2)) then return end
@@ -128,7 +128,7 @@ local function hook_factory(repl_threshold)
 			elseif event == "return" and offset > repl_threshold then
 				offset = offset - 1
 			elseif event == "line" and offset <= repl_threshold then
-				repl()
+				repl(reason)
 			end
 		end
 	end
@@ -234,7 +234,7 @@ function where(info, context_lines)
 	local source = SOURCE_CACHE[info.source]
 	if not source then
 		source = {}
-		local filename = info.source:match("@(.*)") or "<unknown filename>"
+		local filename = info.source:match("@(.*)")
 		if filename then
 			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
 		elseif info.source then
@@ -469,14 +469,15 @@ local function run_command(line)
 	end
 end
 
-repl = function()
+repl = function(reason)
 	-- Skip frames without source info.
 	while not frame_has_line(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
 		stack_inspect_offset = stack_inspect_offset + 1
 	end
 	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)
-	dbg_writeln(format_stack_frame_info(info))
+	reason = reason and (COLOR_YELLOW.."break via "..reason..GREEN_CARET) or ""
+	dbg_writeln(reason..format_stack_frame_info(info))
 	
 	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	
@@ -501,8 +502,7 @@ dbg = setmetatable({}, {
 		stack_inspect_offset = top_offset
 		stack_top = top_offset
 		
-		dbg.write(COLOR_YELLOW.."break via "..(source or "dbg()")..COLOR_RESET..GREEN_CARET)
-		debug.sethook(hook_next(1), "crl")
+		debug.sethook(hook_next(1, source or "dbg()"), "crl")
 		return
 	end,
 })
