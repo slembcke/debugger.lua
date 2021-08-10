@@ -38,7 +38,7 @@ dbg.read = function(prompt)
 end
 
 local function sanity_write(str)
-	print_red "ERROR: dbg.write caled unexpectedly?!"
+	print_red "ERROR: dbg.write called unexpectedly?!"
 	if LOG_IO then print(str) end
 end
 
@@ -94,7 +94,7 @@ function module.run_test(test, test_body)
 end
 
 function module.step()
-	expect "test.lua:8 in upvalue 'func1'"; cmd "s"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "s"
 	expect "test.lua:12 in upvalue 'func2'"; cmd "s"
 	expect "test.lua:13 in upvalue 'func2'"; cmd "s"
 	expect "test.lua:17 in upvalue 'func3'"; cmd "s"
@@ -105,7 +105,7 @@ function module.step()
 end
 
 function module.next()
-	expect "test.lua:8 in upvalue 'func1'"; cmd "n"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "n"
 	expect "test.lua:12 in upvalue 'func2'"; cmd "n"
 	expect "test.lua:13 in upvalue 'func2'"; cmd "n"
 	expect "test.lua:17 in upvalue 'func3'"; cmd "n"
@@ -115,7 +115,7 @@ function module.next()
 end
 
 function module.finish()
-	expect "test.lua:8 in upvalue 'func1'"; cmd "f"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "f"
 	expect "test.lua:12 in upvalue 'func2'"; cmd "f"
 	expect "test.lua:17 in upvalue 'func3'"; cmd "f"
 	expect "test.lua:30 in local 'test_body'"; cmd "c"
@@ -123,9 +123,9 @@ function module.finish()
 end
 
 function module.continue()
-	expect "test.lua:8 in upvalue 'func1'"; cmd "c"
-	expect "test.lua:8 in upvalue 'func1'"; cmd "c"
-	expect "test.lua:8 in upvalue 'func1'"; cmd "c"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "c"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "c"
+	expect "break via dbg() => test.lua:8 in upvalue 'func1'"; cmd "c"
 	print_green "CONTINUE TESTS COMPLETE"
 end
 
@@ -195,13 +195,13 @@ end
 
 function module.eval()
 	ignore(); cmd "e var = true"
-	expect "debugger.lua: Set local var"; cmd "c"
+	expect "debugger.lua => Set local variable var"; cmd "c"
 	
 	ignore(); cmd "e upvar = true"
-	expect "debugger.lua: Set upvalue upvar"; cmd "c"
+	expect "debugger.lua => Set upvalue upvar"; cmd "c"
 	
 	ignore(); cmd "e GLOBAL = true"
-	expect "debugger.lua: Set global GLOBAL"; cmd "c"
+	expect "debugger.lua => Set global variable GLOBAL"; cmd "c"
 	
 	print_green "EVAL TESTS COMPLETE"
 end

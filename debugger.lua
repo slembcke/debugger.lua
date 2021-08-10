@@ -117,7 +117,7 @@ local repl
 local function frame_has_line(info) return info.currentline >= 0 end
 
 local function hook_factory(repl_threshold)
-	return function(offset)
+	return function(offset, reason)
 		return function(event, _)
 			-- Skip events that don't have line information.
 			if not frame_has_line(debug.getinfo(2)) then return end
@@ -128,7 +128,7 @@ local function hook_factory(repl_threshold)
 			elseif event == "return" and offset > repl_threshold then
 				offset = offset - 1
 			elseif event == "line" and offset <= repl_threshold then
-				repl()
+				repl(reason)
 			end
 		end
 	end
@@ -189,7 +189,7 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getlocal(level, i)
 		if name == var then
-			dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set local "..COLOR_BLUE..name..COLOR_RESET)
+			dbg_writeln(COLOR_YELLOW.."debugger.lua"..GREEN_CARET.."Set local variable "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setlocal(level + LUA_JIT_SETLOCAL_WORKAROUND, i, value)
 		end
 		i = i + 1
@@ -200,14 +200,14 @@ local function mutate_bindings(_, name, value)
 	do local i = 1; repeat
 		local var = debug.getupvalue(func, i)
 		if name == var then
-			dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set upvalue "..COLOR_BLUE..name..COLOR_RESET)
+			dbg_writeln(COLOR_YELLOW.."debugger.lua"..GREEN_CARET.."Set upvalue "..COLOR_BLUE..name..COLOR_RESET)
 			return debug.setupvalue(func, i, value)
 		end
 		i = i + 1
 	until var == nil end
 	
 	-- Set a global.
-	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Set global "..COLOR_BLUE..name..COLOR_RESET)
+	dbg_writeln(COLOR_YELLOW.."debugger.lua"..GREEN_CARET.."Set global variable "..COLOR_BLUE..name..COLOR_RESET)
 	_G[name] = value
 end
 
@@ -469,14 +469,15 @@ local function run_command(line)
 	end
 end
 
-repl = function()
+repl = function(reason)
 	-- Skip frames without source info.
 	while not frame_has_line(debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)) do
 		stack_inspect_offset = stack_inspect_offset + 1
 	end
 	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)
-	dbg_writeln(format_stack_frame_info(info))
+	reason = reason and (COLOR_YELLOW.."break via "..COLOR_RED..reason..GREEN_CARET) or ""
+	dbg_writeln(reason..format_stack_frame_info(info))
 	
 	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	
@@ -494,14 +495,14 @@ end
 
 -- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
-	__call = function(self, condition, top_offset)
+	__call = function(self, condition, top_offset, source)
 		if condition then return end
 		
 		top_offset = (top_offset or 0)
 		stack_inspect_offset = top_offset
 		stack_top = top_offset
 		
-		debug.sethook(hook_next(1), "crl")
+		debug.sethook(hook_next(1, source or "dbg()"), "crl")
 		return
 	end,
 })
@@ -526,8 +527,8 @@ local lua_error, lua_assert = error, assert
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
-	dbg_writeln(COLOR_RED.."Debugger stopped on error(): "..COLOR_RESET..pretty(err))
-	dbg(false, level)
+	dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(err))
+	dbg(false, level, "dbg.error()")
 	
 	lua_error(err, level)
 end
@@ -535,8 +536,8 @@ end
 -- Works like assert(), but invokes the debugger on a failure.
 function dbg.assert(condition, message)
 	if not condition then
-		dbg_writeln(COLOR_RED.."Debugger stopped on assert:"..COLOR_RESET..message)
-		dbg(false, 1)
+		dbg_writeln(COLOR_RED.."ERROR:"..COLOR_RESET..message)
+		dbg(false, 1, "dbg.assert()")
 	end
 	
 	return lua_assert(condition, message)
@@ -545,8 +546,8 @@ end
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, ...)
 	return xpcall(f, function(err)
-		dbg_writeln(COLOR_RED.."Debugger stopped on error in dbg.call(): "..COLOR_RESET..pretty(err))
-		dbg(false, 1)
+		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(err))
+		dbg(false, 1, "dbg.call()")
 		
 		return err
 	end, ...)
@@ -555,8 +556,8 @@ end
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
 	if debug.getinfo(2) then
-		dbg_writeln(COLOR_RED.."Debugger attached on error in dbg_call(): "..COLOR_RESET..pretty(...))
-		dbg(false, 1)
+		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(...))
+		dbg(false, 1, "dbg.msgh()")
 	else
 		dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Error did not occur in Lua code. Execution will continue after dbg_pcall().")
 	end
@@ -637,7 +638,7 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 			end
 			return str
 		end
-		dbg_writeln(COLOR_RED.."debugger.lua: Linenoise support enabled."..COLOR_RESET)
+		dbg_writeln(COLOR_YELLOW.."debugger.lua: "..COLOR_RESET.."Linenoise support enabled.")
 	end)
 	
 	-- Conditionally enable LuaJIT readline support.
@@ -658,7 +659,7 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 					return nil
 				end
 			end
-			dbg_writeln(COLOR_RED.."debugger.lua: Readline support enabled."..COLOR_RESET)
+			dbg_writeln(COLOR_YELLOW.."debugger.lua: "..COLOR_RESET.."Readline support enabled.")
 		end
 	end)
 end
@@ -666,12 +667,12 @@ end
 -- Detect Lua version.
 if jit then -- LuaJIT
 	LUA_JIT_SETLOCAL_WORKAROUND = -1
-	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for "..jit.version)
+	dbg_writeln(COLOR_YELLOW.."debugger.lua: "..COLOR_RESET.."Loaded for "..jit.version)
 elseif "Lua 5.1" <= _VERSION and _VERSION <= "Lua 5.4" then
-	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Loaded for ".._VERSION)
+	dbg_writeln(COLOR_YELLOW.."debugger.lua: "..COLOR_RESET.."Loaded for ".._VERSION)
 else
-	dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Not tested against ".._VERSION)
-	dbg_writeln(COLOR_RED.."Please send me feedback!"..COLOR_RESET)
+	dbg_writeln(COLOR_YELLOW.."debugger.lua: "..COLOR_RESET.."Not tested against ".._VERSION)
+	dbg_writeln("Please send me feedback!")
 end
 
 return dbg
