@@ -230,7 +230,7 @@ end
 
 local SOURCE_CACHE = {}
 
-function where(info, context_lines)
+local function where(info, context_lines)
 	local source = SOURCE_CACHE[info.source]
 	if not source then
 		source = {}
@@ -260,17 +260,17 @@ end
 local unpack = unpack or table.unpack
 local pack = function(...) return {n = select("#", ...), ...} end
 
-function cmd_step()
+local function cmd_step()
 	stack_inspect_offset = stack_top
 	return true, hook_step
 end
 
-function cmd_next()
+local function cmd_next()
 	stack_inspect_offset = stack_top
 	return true, hook_next
 end
 
-function cmd_finish()
+local function cmd_finish()
 	local offset = stack_top - stack_inspect_offset
 	stack_inspect_offset = stack_top
 	return true, offset < 0 and hook_factory(offset - 1) or hook_finish
@@ -495,7 +495,7 @@ end
 
 -- Make the debugger object callable like a function.
 dbg = setmetatable({}, {
-	__call = function(self, condition, top_offset, source)
+	__call = function(_, condition, top_offset, source)
 		if condition then return end
 		
 		top_offset = (top_offset or 0)
