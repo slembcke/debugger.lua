@@ -1,3 +1,5 @@
+# run this file from the main folder, NOT from within the "embed" 
+
 local lua_src = string.format("%q", io.open("debugger.lua"):read("a"))
 
 -- Fix the weird escape characters
