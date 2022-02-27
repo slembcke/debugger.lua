@@ -586,7 +586,7 @@ if ffi then
 		return success and func or nil
 	end
 	
-	local isatty = get_func_or_nil("isatty") or get_func_or_nil("_isatty")
+	local isatty = get_func_or_nil("isatty") or get_func_or_nil("_isatty") or (ffi.load("ucrtbase"))["_isatty"]
 	stdin_isatty = isatty(0)
 	stdout_isatty = isatty(1)
 end
