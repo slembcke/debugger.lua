@@ -5,7 +5,7 @@ lua_src = string.gsub(lua_src, "\\\n", "\\n")
 lua_src = string.gsub(lua_src, "\\9", "\\t")
 
 local c_src = [[/*
-	Copyright (c) 2015 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2023 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
