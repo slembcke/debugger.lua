@@ -290,7 +290,7 @@ local function cmd_print(expr)
 	else
 		local output = ""
 		for i = 2, results.n do
-			output = output..(i ~= 2 and ", " or "")..pretty(results[i])
+			output = output..(i ~= 2 and ", " or "")..dbg.pretty(results[i])
 		end
 		
 		if output == "" then output = "<no result>" end
@@ -395,7 +395,7 @@ local function cmd_locals()
 		
 		-- Skip the debugger object itself, "(*internal)" values, and Lua 5.2's _ENV object.
 		if not rawequal(v, dbg) and k ~= "_ENV" and not k:match("%(.*%)") then
-			dbg_writeln("  "..COLOR_BLUE..k.. GREEN_CARET..pretty(v))
+			dbg_writeln("  "..COLOR_BLUE..k.. GREEN_CARET..dbg.pretty(v))
 		end
 	end
 	
@@ -517,7 +517,7 @@ dbg.writeln = dbg_writeln
 
 dbg.pretty_depth = 3
 dbg.pretty = pretty
-dbg.pp = function(value, depth) dbg_writeln(pretty(value, depth)) end
+dbg.pp = function(value, depth) dbg_writeln(dbg.pretty(value, depth)) end
 
 dbg.auto_where = false
 dbg.auto_eval = false
@@ -527,7 +527,7 @@ local lua_error, lua_assert = error, assert
 -- Works like error(), but invokes the debugger.
 function dbg.error(err, level)
 	level = level or 1
-	dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(err))
+	dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..dbg.pretty(err))
 	dbg(false, level, "dbg.error()")
 	
 	lua_error(err, level)
@@ -546,7 +546,7 @@ end
 -- Works like pcall(), but invokes the debugger on an error.
 function dbg.call(f, ...)
 	return xpcall(f, function(err)
-		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(err))
+		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..dbg.pretty(err))
 		dbg(false, 1, "dbg.call()")
 		
 		return err
@@ -556,7 +556,7 @@ end
 -- Error message handler that can be used with lua_pcall().
 function dbg.msgh(...)
 	if debug.getinfo(2) then
-		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..pretty(...))
+		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..dbg.pretty(...))
 		dbg(false, 1, "dbg.msgh()")
 	else
 		dbg_writeln(COLOR_RED.."debugger.lua: "..COLOR_RESET.."Error did not occur in Lua code. Execution will continue after dbg_pcall().")
