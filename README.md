@@ -1,15 +1,13 @@
-debugger.lua
+🐞 debugger.lua 🌖
 =
 
 A simple, embedabble debugger for Lua 5.x, and LuaJIT 2.x.
-
-
 
 ![ExampleLog](https://raw.githubusercontent.com/slembcke/debugger.lua/ec29cc13224750d109383c949950d7cafd6fcbdf/debugger_lua.png)
 
 debugger.lua is a simple, single file, pure Lua debugger that is easy to integrate with any project. The lua-users wiki lists a [number of debuggers](http://lua-users.org/wiki/DebuggingLuaCode). clidebugger was closest to what I was looking for, but I ran into several compatibility issues, and the rest are pretty big libraries with a whole lot of dependencies. I just wanted something simple to integrate that would work through stdin/stdout. I also decided that it sounded fun to try and make my own!
 
-Features
+✅ Features
 -
 
 - Trivial to "install". Can be integrated as a single .lua _or_ .c file.
@@ -24,7 +22,7 @@ Features
 - IO can easily be remapped to a socket or window by overwriting the `dbg.write()` and `dbg.read()` functions.
 - Permissive MIT license.
 
-Easy to use from C too!
+🙌 Easy to use from C too!
 -
 
 debugger.lua can be easily integrated into an embedded project with just a .c and .h file. First though, you'll need to run `lua embed/debugger.c.lua`. This generates embed/debugger.c by inserting the lua code into a template .c file.
@@ -52,7 +50,7 @@ int main(int argc, char **argv){
 
 Now in your Lua code you can just use the global variable or `require` the module name you passed to the `dbg_setup()` call.
 
-Debugger Commands:
+🐝 Debugger Commands:
 -
 
 If you have used other CLI debuggers, debugger.lua shouldn't be surprising. I didn't make a fancy parser, so the commands are just single letters. Since the debugger is pretty simple there are only a small handful of commands anwyay.
@@ -73,7 +71,7 @@ If you have used other CLI debuggers, debugger.lua shouldn't be surprising. I di
 
 If you've never used a command line debugger before, start a nice warm cozy fire, run tutorial.lua, and open it up in your favorite editor so you can follow along.
 
-Debugger API
+🦋 Debugger API
 -
 
 There are several overloadable functions you can use to customize debugger.lua.
@@ -95,12 +93,12 @@ There are also some goodies you can use to make debugging easier.
 * `dbg.assert(error, [message])` - Drop in replacement for `assert()` that breaks in the debugger.
 * `dbg.call(f, ...)` - Drop in replacement for `pcall()` that breaks in the debugger.
 
-Environment Variables:
+🪲 Environment Variables:
 -
 
 Want to disable ANSI color support or disable GNU readline? Set the `DBG_NOCOLOR` and/or `DBG_NOREADLINE` environment variables.
 
-Known Issues:
+🕷️ Known Issues:
 -
 
 - Lua 5.1 lacks the API to access varargs. The workaround is to do something like `local args = {...}` and then use `unpack(args)` when you want to access them. In Lua 5.2+ and LuaJIT, you can simply use `...` in your expressions with the print command.
@@ -109,7 +107,7 @@ Known Issues:
 - Tail calls are handled silghtly differently in different interpreters. You may find that 1.) stepping into a function that does nothing but a tail call steps you into the tail called function. 2.) The interpreter gives you the wrong name of a tail called function (watch the line numbers). 3.) Stepping out of a tail called function also steps out of the function that performed the tail call. Mostly this is never a problem, but it is a little confusing if you don't know what is going on.
 - Coroutine support has not been tested extensively yet, and Lua vs. LuaJIT handle them differently anyway. -_-
 
-License:
+🪰 License:
 -
 
 	Copyright (c) 2023 Scott Lembcke and Howling Moon Software
