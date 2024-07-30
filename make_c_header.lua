@@ -5,6 +5,44 @@ local template = [==[
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2024 Scott Lembcke and Howling Moon Software
 
+/*
+	Using debugger.lua from C code is pretty straightforward.
+	Basically you just need to call one of the setup functions to make the debugger available.
+	Then you can reference the debugger in your Lua code as normal.
+	If you want to wrap the lua code from your C entrypoints, you can use
+	dbg_pcall() or dbg_dofile() instead.
+	
+	That's it!!
+	
+	#include <stdio.h>
+	#include <lua.h>
+	#include <lualib.h>
+	#include <lauxlib.h>
+	
+	#define DEBUGGER_LUA_IMPLEMENTATION
+	#include "debugger_lua.h"
+	
+	int main(int argc, char **argv){
+		lua_State *lua = luaL_newstate();
+		luaL_openlibs(lua);
+		
+		// This defines a module named 'debugger' which is assigned to a global named 'dbg'.
+		// If you want to change these values or redirect the I/O, then use dbg_setup() instead.
+		dbg_setup_default(lua);
+		
+		luaL_loadstring(lua,
+			"local num = 1\n"
+			"local str = 'one'\n"
+			"local res = num + str\n"
+		);
+		
+		// Call into the lua code, and catch any unhandled errors in the debugger.
+		if(dbg_pcall(lua, 0, 0, 0)){
+			fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
+		}
+	}
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,9 +63,10 @@ void dbg_setup_default(lua_State *lua);
 // Drop in replacement for lua_pcall() that attaches the debugger on an error if 'msgh' is 0.
 int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh);
 
+// Drop in replacement for luaL_dofile()
 #define dbg_dofile(lua, filename) (luaL_loadfile(lua, filename) || dbg_pcall(lua, 0, LUA_MULTRET, 0))
 
-#ifdef DEBUGGER_LUA_DEFINE
+#ifdef DEBUGGER_LUA_IMPLEMENTATION
 
 #include <stdbool.h>
 #include <assert.h>

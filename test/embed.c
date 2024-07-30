@@ -1,12 +1,9 @@
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2024 Scott Lembcke and Howling Moon Software
-
 #include <stdio.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 
-#define DEBUGGER_LUA_DEFINE
+#define DEBUGGER_LUA_IMPLEMENTATION
 #include "debugger_lua.h"
 
 int main(int argc, char **argv){
