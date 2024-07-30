@@ -21,7 +21,7 @@ print[[
 	as well as which function you are in.
 	Keep a close watch on this as you follow along.
 	It should be stopped a line after the dbg() call.
-	(Line 86 unless I forgot to double update it)
+	(Line 88 unless I forgot to double update it)
 	
 	Sometimes functions don't have global names.
 	It might print the name of a method, local variable
