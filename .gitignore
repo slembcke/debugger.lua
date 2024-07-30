@@ -1,2 +1,3 @@
-debugger.c
-embed/debugger_lua.c
+*.o
+debugger_lua.h
+test/embed
