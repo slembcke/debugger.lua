@@ -79,7 +79,7 @@ There are several overloadable functions you can use to customize debugger.lua.
 * `dbg.write(str)` - Write a string to the output. (Defaults to write to stdout)
 * `dbg.shorten_path(path)` - Return a shortened version of a path. (Defaults to simply return `path`)
 * `dbg.exit(err)` - Stop debugging. (Defaults to `os.exit(err)`)
-* `dbg.pretty(obj)' - Output a pretty print string for an object. (Defaults to a reasonable version using __tostring metamethods and such)
+* `dbg.pretty(obj)` - Output a pretty print string for an object. (Defaults to a reasonable version using __tostring metamethods and such)
 
 Using these you can customize the debugger to work in your environment. For instance, you can divert the I/O over a network socket or to a GUI window.
 
