@@ -10,7 +10,7 @@ debugger.lua is a simple, single file, pure Lua debugger that is easy to integra
 ✅ Features
 -
 
-- Trivial to "install". Can be integrated as a single .lua _or_ .c file.
+- Trivial to "install". Can be integrated as a single .lua _or_ .h file.
 - The regular assortment of commands you'd expect from a debugger: continue, step, next, finish, print/eval expression, move up/down the stack, backtrace, print locals, inline help.
 - Evaluate expressions, call functions interactively, and get/set variables.
 - Pretty printed output so you see `{1 = 3, "a" = 5}` instead of `table: 0x10010cfa0`
@@ -25,30 +25,39 @@ debugger.lua is a simple, single file, pure Lua debugger that is easy to integra
 🙌 Easy to use from C too!
 -
 
-debugger.lua can be easily integrated into an embedded project with just a .c and .h file. First though, you'll need to run `lua embed/debugger.c.lua`. This generates embed/debugger.c by inserting the lua code into a template .c file.
+debugger.lua can be easily integrated into an embedded project with just a .h file. First though, you'll need to run `lua make_c_header.lua`. This generates debugger_lua.h by inserting the lua code into a template .h file.
 
 ```c
+// You need to define this in one of your C files. (and only one!)
+#define DEBUGGER_LUA_IMPLEMENTATION
+#include "debugger_lua.h"
+
 int main(int argc, char **argv){
+	// Do normal Lua init stuff.
 	lua_State *lua = luaL_newstate();
 	luaL_openlibs(lua);
-
-	// The 2nd parameter is the module name. (Ex: require("debugger") )
-	// The 3rd parameter is the name of a global variable to bind it to, or NULL if you don't want one.
-	// The last two are lua_CFunctions for overriding the I/O functions.
-	// A NULL I/O function  means to use standard input or output respectively.
-	dbg_setup(lua, "debugger", "dbg", NULL, NULL);
-
-	// Load some lua code and prepare to call the MyBuggyFunction() defined below...
-
-	// dbg_pcall() is called exactly like lua_pcall().
-	// Although note that using a custom message handler disables the debugger.
-	if(dbg_pcall(lua, nargs, nresults, 0)){
+	
+	// Load up the debugger module as "debugger".
+	// Also stores it in a global variable "dbg".
+	// Use dbg_setup() to change these or use custom I/O.
+	dbg_setup_default(lua);
+	
+	// Load some buggy Lua code.
+	luaL_loadstring(lua,
+		"local num = 1 \n"
+		"local str = 'one' \n"
+		"local res = num + str \n"
+	);
+	
+	// Run it in the debugger. This function works just like lua_pcall() otherwise.
+	// Note that setting your own custom message handler disables the debugger.
+	if(dbg_pcall(lua, 0, 0, 0)){
 		fprintf(stderr, "Lua Error: %s\n", lua_tostring(lua, -1));
 	}
 }
 ```
 
-Now in your Lua code you can just use the global variable or `require` the module name you passed to the `dbg_setup()` call.
+Now in your Lua code you can access `dbg` or use `require 'debugger'`.
 
 🐝 Debugger Commands:
 -
@@ -110,7 +119,7 @@ Want to disable ANSI color support or disable GNU readline? Set the `DBG_NOCOLOR
 🪰 License:
 -
 
-	Copyright (c) 2023 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2024 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
