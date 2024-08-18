@@ -108,4 +108,8 @@ tests.run_test(tests.error_message, function()
 	assert(msg)
 end)
 
+tests.run_test(tests.inspect, function()
+	func3()
+end)
+
 tests.print_green "TESTS COMPLETE"

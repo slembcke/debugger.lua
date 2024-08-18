@@ -339,6 +339,17 @@ local function cmd_up()
 	return false
 end
 
+local function cmd_inspect(offset)
+	offset = stack_top + tonumber(offset)
+	local info = debug.getinfo(offset + CMD_STACK_LEVEL)
+	if info then
+		stack_inspect_offset = offset
+		dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
+	else
+		dbg.writeln(COLOR_RED.."ERROR: "..COLOR_BLUE.."Invalid stack frame index."..COLOR_RESET)
+	end
+end
+
 local function cmd_where(context_lines)
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
 	return (info and where(info, tonumber(context_lines) or 5))
@@ -388,6 +399,7 @@ local function cmd_help()
 		..COLOR_BLUE.."  f"..COLOR_YELLOW.."(inish)"..GREEN_CARET.."step forward until exiting the current function\n"
 		..COLOR_BLUE.."  u"..COLOR_YELLOW.."(p)"..GREEN_CARET.."move up the stack by one frame\n"
 		..COLOR_BLUE.."  d"..COLOR_YELLOW.."(own)"..GREEN_CARET.."move down the stack by one frame\n"
+		..COLOR_BLUE.."  i"..COLOR_YELLOW.."(nspect) "..COLOR_BLUE.."[index]"..GREEN_CARET.."move to a specific stack frame\n"
 		..COLOR_BLUE.."  w"..COLOR_YELLOW.."(here) "..COLOR_BLUE.."[line count]"..GREEN_CARET.."print source code around the current line\n"
 		..COLOR_BLUE.."  e"..COLOR_YELLOW.."(val) "..COLOR_BLUE.."[statement]"..GREEN_CARET.."execute the statement\n"
 		..COLOR_BLUE.."  p"..COLOR_YELLOW.."(rint) "..COLOR_BLUE.."[expression]"..GREEN_CARET.."execute the expression and print the result\n"
@@ -410,6 +422,7 @@ local commands = {
 	["^e%s+(.*)$"] = cmd_eval,
 	["^u$"] = cmd_up,
 	["^d$"] = cmd_down,
+	["i%s*(%d+)"] = cmd_inspect,
 	["^w%s*(%d*)$"] = cmd_where,
 	["^t$"] = cmd_trace,
 	["^l$"] = cmd_locals,

@@ -19,7 +19,7 @@ local dbg_write = dbg.write
 local lua_assert = assert
 local lua_error = error
 
-local LOG_IO = false
+local LOG_IO = true
 
 function string.strip(str) return str:match("^%s*(.-)%s*$") end
 
@@ -273,14 +273,42 @@ function tests.error()
 	expect "ERROR: nil"
 	cmd "c"
 	expect "break via dbg.error() => test.lua:102 in chunk at test.lua:102"
-	print_green "ASSERT MESSAGE TESTS COMPLETE"
+	print_green "ERROR TESTS COMPLETE"
 end
 
 function tests.error_message()
 	expect 'ERROR: "this error message"'
 	cmd "c"
 	expect "break via dbg.error() => test.lua:107 in chunk at test.lua:107"
-	print_green "ASSERT MESSAGE TESTS COMPLETE"
+	print_green "ERROR MESSAGE TESTS COMPLETE"
+end
+
+function tests.inspect()
+	ignore(); -- Stack frame info that will be in the trace anyway.
+	
+	cmd "i0"
+	expect "Inspecting frame: test.lua:8 in upvalue 'func1'"
+	cmd "i 1"
+	expect "Inspecting frame: test.lua:11 in upvalue 'func2'"
+	cmd "i  2"
+	expect "Inspecting frame: test.lua:16 in upvalue 'func3'"
+	cmd "i\t3"
+	expect "Inspecting frame: test.lua:112 in local 'test_body'"
+	cmd "i4"
+	expect "Inspecting frame: ./test_util.lua:88 in field 'run_test'"
+	cmd "i5"
+	expect "Inspecting frame: test.lua:111 in chunk at test.lua:0"
+	cmd "i6"
+	expect "Inspecting frame: [C]:-1 in chunk at [C]:-1"
+	cmd "i7"
+	expect "ERROR: Invalid stack frame index."
+	
+	-- double check the last frame was actuall set
+	cmd "t"
+	expect "Inspecting frame 6"
+	
+	cmd "c"
+	print_green "INSPECT TESTS COMPLETE"
 end
 
 tests.print_red = print_red
