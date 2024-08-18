@@ -513,7 +513,7 @@ end
 -- Works like assert(), but invokes the debugger on a failure.
 function dbg.assert(condition, message)
 	if not condition then
-		dbg_writeln(COLOR_RED.."ERROR:"..COLOR_RESET..message)
+		dbg_writeln(COLOR_RED.."ERROR: "..COLOR_RESET..(message or "assertion failed!"))
 		dbg(false, 1, "dbg.assert()")
 	end
 	
