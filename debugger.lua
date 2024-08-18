@@ -620,7 +620,7 @@ if stdin_isatty and not os.getenv("DBG_NOREADLINE") then
 	
 	-- Conditionally enable LuaJIT readline support.
 	pcall(function()
-		if dbg.read == nil and ffi then
+		if dbg.read == dbg_read and ffi then
 			local readline = ffi.load("readline")
 			dbg.read = function(prompt)
 				local cstr = readline.readline(prompt)
