@@ -19,7 +19,7 @@ local dbg_write = dbg.write
 local lua_assert = assert
 local lua_error = error
 
-local LOG_IO = true
+local LOG_IO = false
 
 function string.strip(str) return str:match("^%s*(.-)%s*$") end
 
