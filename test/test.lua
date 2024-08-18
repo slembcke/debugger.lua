@@ -82,4 +82,30 @@ tests.run_test(tests.locals, function()
 	_ = _
 end)
 
+tests.run_test(tests.assert_pass, function()
+	dbg.assert(true)
+	dbg.assert(true, "should not trigger")
+end)
+
+tests.run_test(tests.assert_fail, function()
+	local _, err = pcall(function() dbg.assert(false) end)
+	assert(err)
+end)
+
+tests.run_test(tests.assert_message, function()
+	local msg = "should trigger"
+	local _, err = pcall(function() dbg.assert(false, msg) end)
+	assert(msg)
+end)
+
+tests.run_test(tests.error, function()
+	pcall(function() dbg.error() end)
+end)
+
+tests.run_test(tests.error_message, function()
+	local msg = "this error message"
+	local _, err = pcall(function() dbg.error(msg) end)
+	assert(msg)
+end)
+
 tests.print_green "TESTS COMPLETE"
