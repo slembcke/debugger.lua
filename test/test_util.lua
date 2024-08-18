@@ -171,7 +171,7 @@ function tests.updown()
 	expect "Already at the bottom of the stack."
 	
 	cmd "c"
-	print_green "UP/DOWN TESTES COMPLETE"
+	print_green "UP/DOWN TESTS COMPLETE"
 end
 
 function tests.where()
