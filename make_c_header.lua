@@ -72,7 +72,8 @@ int dbg_pcall(lua_State *lua, int nargs, int nresults, int msgh);
 #include <assert.h>
 #include <string.h>
 
-static const char DEBUGGER_SRC[] = {{=lua_src}};
+static const char DEBUGGER_SRC[] =
+{{=lua_src}};
 
 int luaopen_debugger(lua_State *lua){
 	if(
@@ -215,11 +216,24 @@ local output_filename = arg[2] or "debugger_lua.h"
 
 local lua_src = io.open(input_filename):read("a")
 
--- Fix the weird escape characters
-lua_src = string.format("%q", lua_src)
-lua_src = string.gsub(lua_src, "\\\n", "\\n")
-lua_src = string.gsub(lua_src, "\\9", "\\t")
+local chunks = {}
+local cursor, chunk_size = 1, 120;
+while true do
+	local chunk = lua_src:sub(cursor, cursor + chunk_size - 1)
+	if chunk == "" then
+		break
+	else
+		cursor = cursor + chunk_size
 
+		-- Fix the weird escape characters
+		chunk = string.format("%q", chunk)
+		chunk = string.gsub(chunk, "\\\n", "\\n")
+		chunk = string.gsub(chunk, "\\9", " ")
+		table.insert(chunks, chunk)
+	end
+end
+
+lua_src = table.concat(chunks, "\n")
 
 local output = elua.compile(template){lua_src = lua_src}
 io.open(output_filename, "w"):write(output)
