@@ -216,6 +216,7 @@ local function where(info, context_lines)
 			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
 		elseif info.source then
 			for line in info.source:gmatch("(.-)\n") do table.insert(source, line) end
+			table.insert(source, info.source:match("([^\n]*)$"))
 		end
 		SOURCE_CACHE[info.source] = source
 	end
