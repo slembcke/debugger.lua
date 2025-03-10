@@ -80,7 +80,7 @@ end
 
 local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":"..COLOR_YELLOW..line..COLOR_RESET end
 local function format_stack_frame_info(info)
-	local filename = info.source:match("@(.*)")
+	local filename = info.source:match("^@(.*)")
 	local source = filename and dbg.shorten_path(filename) or info.short_src
 	local namewhat = (info.namewhat == "" and "chunk at" or info.namewhat)
 	local name = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or format_loc(source, info.linedefined))
