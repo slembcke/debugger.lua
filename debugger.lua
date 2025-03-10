@@ -211,7 +211,7 @@ local function where(info, context_lines)
 	local source = SOURCE_CACHE[info.source]
 	if not source then
 		source = {}
-		local filename = info.source:match("@(.*)")
+		local filename = info.source:match("^@(.*)")
 		if filename then
 			pcall(function() for line in io.lines(filename) do table.insert(source, line) end end)
 		elseif info.source then
