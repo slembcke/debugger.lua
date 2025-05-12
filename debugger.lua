@@ -78,13 +78,16 @@ local function dbg_writeln(str, ...)
 	end
 end
 
-local function format_loc(file, line) return COLOR_BLUE..file..COLOR_RESET..":"..COLOR_YELLOW..line..COLOR_RESET end
-local function format_stack_frame_info(info)
+local function format_loc(info, line)
 	local filename = info.source:match("^@(.*)")
 	local source = filename and dbg.shorten_path(filename) or info.short_src
+	return COLOR_BLUE..source..COLOR_RESET..":"..COLOR_YELLOW..line..COLOR_RESET
+end
+
+local function format_stack_frame_info(info)
 	local namewhat = (info.namewhat == "" and "chunk at" or info.namewhat)
-	local name = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or format_loc(source, info.linedefined))
-	return format_loc(source, info.currentline).." in "..namewhat.." "..name
+	local name = (info.name and "'"..COLOR_BLUE..info.name..COLOR_RESET.."'" or dbg.format_loc(info, info.linedefined))
+	return dbg.format_loc(info, info.currentline).." in "..namewhat.." "..name
 end
 
 local repl
@@ -307,7 +310,7 @@ local function cmd_down()
 	
 	if info then
 		stack_inspect_offset = offset
-		dbg_writeln("Inspecting frame: "..format_stack_frame_info(info))
+		dbg_writeln("Inspecting frame: "..dbg.format_stack_frame_info(info))
 		if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
@@ -329,7 +332,7 @@ local function cmd_up()
 	
 	if info then
 		stack_inspect_offset = offset
-		dbg_writeln("Inspecting frame: "..format_stack_frame_info(info))
+		dbg_writeln("Inspecting frame: "..dbg.format_stack_frame_info(info))
 		if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	else
 		info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
@@ -344,7 +347,7 @@ local function cmd_inspect(offset)
 	local info = debug.getinfo(offset + CMD_STACK_LEVEL)
 	if info then
 		stack_inspect_offset = offset
-		dbg.writeln("Inspecting frame: "..format_stack_frame_info(info))
+		dbg.writeln("Inspecting frame: "..dbg.format_stack_frame_info(info))
 	else
 		dbg.writeln(COLOR_RED.."ERROR: "..COLOR_BLUE.."Invalid stack frame index."..COLOR_RESET)
 	end
@@ -363,7 +366,7 @@ local function cmd_trace()
 		
 		local is_current_frame = (i + stack_top == stack_inspect_offset)
 		local tab_or_caret = (is_current_frame and  GREEN_CARET or "    ")
-		dbg_writeln(COLOR_GRAY.."% 4d"..COLOR_RESET..tab_or_caret.."%s", i, format_stack_frame_info(info))
+		dbg_writeln(COLOR_GRAY.."% 4d"..COLOR_RESET..tab_or_caret.."%s", i, dbg.format_stack_frame_info(info))
 		i = i + 1
 	end
 	
@@ -467,7 +470,7 @@ repl = function(reason)
 	
 	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL - 3)
 	reason = reason and (COLOR_YELLOW.."break via "..COLOR_RED..reason..GREEN_CARET) or ""
-	dbg_writeln(reason..format_stack_frame_info(info))
+	dbg_writeln(reason..dbg.format_stack_frame_info(info))
 	
 	if tonumber(dbg.auto_where) then where(info, dbg.auto_where) end
 	
@@ -484,7 +487,14 @@ repl = function(reason)
 end
 
 -- Make the debugger object callable like a function.
-dbg = setmetatable({}, {
+dbg = setmetatable({
+	COLOR_GRAY = COLOR_GRAY,
+	COLOR_RED = COLOR_RED,
+	COLOR_BLUE = COLOR_BLUE,
+	COLOR_YELLOW = COLOR_YELLOW,
+	COLOR_RESET = COLOR_RESET,
+	GREEN_CARET = GREEN_CARET,
+}, {
 	__call = function(_, condition, top_offset, source)
 		if condition then return end
 		
@@ -501,6 +511,8 @@ dbg = setmetatable({}, {
 dbg.read = dbg_read
 dbg.write = dbg_write
 dbg.shorten_path = function (path) return path end
+dbg.format_loc = format_loc
+dbg.format_stack_frame_info = format_stack_frame_info
 dbg.exit = function(err) os.exit(err) end
 
 dbg.writeln = dbg_writeln
