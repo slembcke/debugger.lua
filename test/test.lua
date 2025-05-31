@@ -85,6 +85,10 @@ end)
 tests.run_test(tests.assert_pass, function()
 	dbg.assert(true)
 	dbg.assert(true, "should not trigger")
+	
+	-- check that it returns the same args as assert()
+	local err, foo, bar = dbg.assert(true, "foo", "bar")
+	assert(err and foo == "foo" and bar == "bar")
 end)
 
 tests.run_test(tests.assert_fail, function()

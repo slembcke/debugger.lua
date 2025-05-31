@@ -258,28 +258,28 @@ end
 function tests.assert_fail()
 	expect "ERROR: assertion failed!"
 	cmd "c"
-	expect "break via dbg.assert() => test.lua:91 in chunk at test.lua:91"
+	expect "break via dbg.assert() => test.lua:95 in chunk at test.lua:95"
 	print_green "ASSERT FAIL TESTS COMPLETE"
 end
 
 function tests.assert_message()
 	expect "ERROR: should trigger"
 	cmd "c"
-	expect "break via dbg.assert() => test.lua:97 in chunk at test.lua:97"
+	expect "break via dbg.assert() => test.lua:101 in chunk at test.lua:101"
 	print_green "ASSERT MESSAGE TESTS COMPLETE"
 end
 
 function tests.error()
 	expect "ERROR: nil"
 	cmd "c"
-	expect "break via dbg.error() => test.lua:102 in chunk at test.lua:102"
+	expect "break via dbg.error() => test.lua:106 in chunk at test.lua:106"
 	print_green "ERROR TESTS COMPLETE"
 end
 
 function tests.error_message()
 	expect 'ERROR: "this error message"'
 	cmd "c"
-	expect "break via dbg.error() => test.lua:107 in chunk at test.lua:107"
+	expect "break via dbg.error() => test.lua:111 in chunk at test.lua:111"
 	print_green "ERROR MESSAGE TESTS COMPLETE"
 end
 
@@ -293,11 +293,11 @@ function tests.inspect()
 	cmd "i  2"
 	expect "Inspecting frame: test.lua:16 in upvalue 'func3'"
 	cmd "i\t3"
-	expect "Inspecting frame: test.lua:112 in local 'test_body'"
+	expect "Inspecting frame: test.lua:116 in local 'test_body'"
 	cmd "i4"
 	expect "Inspecting frame: ./test_util.lua:88 in field 'run_test'"
 	cmd "i5"
-	expect "Inspecting frame: test.lua:111 in chunk at test.lua:0"
+	expect "Inspecting frame: test.lua:115 in chunk at test.lua:0"
 	cmd "i6"
 	expect "Inspecting frame: [C]:-1 in chunk at [C]:-1"
 	cmd "i7"
