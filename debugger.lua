@@ -240,6 +240,18 @@ end
 local unpack = unpack or table.unpack
 local pack = function(...) return {n = select("#", ...), ...} end
 
+local function cmd_step_and_where()
+	stack_inspect_offset = stack_top
+	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
+	return true, hook_step, (info and where(info, tonumber(context_lines) or 5))
+end
+
+local function cmd_step_and_where()
+	stack_inspect_offset = stack_top
+	local info = debug.getinfo(stack_inspect_offset + CMD_STACK_LEVEL)
+	return true, hook_next, (info and where(info, tonumber(context_lines) or 5))
+end
+
 local function cmd_step()
 	stack_inspect_offset = stack_top
 	return true, hook_step
@@ -398,6 +410,8 @@ local function cmd_help()
 		..COLOR_BLUE.."  <return>"..GREEN_CARET.."re-run last command\n"
 		..COLOR_BLUE.."  c"..COLOR_YELLOW.."(ontinue)"..GREEN_CARET.."continue execution\n"
 		..COLOR_BLUE.."  s"..COLOR_YELLOW.."(tep)"..GREEN_CARET.."step forward by one line (into functions)\n"
+		..COLOR_BLUE.."  sw"..COLOR_YELLOW.."(here)"..GREEN_CARET.."step forward by one line (into functions) and prints source code around the current line\n"
+		..COLOR_BLUE.."  nw"..COLOR_YELLOW.."(here)"..GREEN_CARET.."step forward by one line (skipping over functions) and prints source code around the current line\n"
 		..COLOR_BLUE.."  n"..COLOR_YELLOW.."(ext)"..GREEN_CARET.."step forward by one line (skipping over functions)\n"
 		..COLOR_BLUE.."  f"..COLOR_YELLOW.."(inish)"..GREEN_CARET.."step forward until exiting the current function\n"
 		..COLOR_BLUE.."  u"..COLOR_YELLOW.."(p)"..GREEN_CARET.."move up the stack by one frame\n"
@@ -420,6 +434,8 @@ local commands = {
 	["^c$"] = function() return true end,
 	["^s$"] = cmd_step,
 	["^n$"] = cmd_next,
+	["^sw%s*(%d*)$"] = cmd_step_and_where,
+	["^nw%s*(%d*)$"] = cmd_next_and_where,
 	["^f$"] = cmd_finish,
 	["^p%s+(.*)$"] = cmd_print,
 	["^e%s+(.*)$"] = cmd_eval,
