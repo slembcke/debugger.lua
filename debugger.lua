@@ -59,7 +59,7 @@ end
 
 -- Default dbg.write function
 local function dbg_write(str)
-	io.write(str)
+	io.stderr:write(str)
 end
 
 local function dbg_writeln(str, ...)
