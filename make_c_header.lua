@@ -214,7 +214,7 @@ end
 local input_filename = arg[1] or "debugger.lua"
 local output_filename = arg[2] or "debugger_lua.h"
 
-local lua_src = io.open(input_filename):read("a")
+local lua_src = io.open(input_filename, "r"):read("a")
 
 local chunks = {}
 local cursor, chunk_size = 1, 120;
