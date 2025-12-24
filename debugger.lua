@@ -570,7 +570,7 @@ dbg.use_color(color_maybe_supported and not os.getenv("DBG_NOCOLOR"))
 -- Detect Lua version.
 if jit then -- LuaJIT
 	LUA_JIT_SETLOCAL_WORKAROUND = -1
-elseif _VERSION < "Lua 5.1" or _VERSION > "Lua 5.4" then
+elseif _VERSION < "Lua 5.1" or _VERSION > "Lua 5.5" then
 	dbg_writeln((dbg.COLOR_YELLOW).."debugger.lua: "..(dbg.COLOR_RESET).."Not tested against ".._VERSION)
 	dbg_writeln("Please send me feedback!")
 end
