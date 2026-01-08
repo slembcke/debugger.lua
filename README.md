@@ -119,7 +119,7 @@ Want to disable ANSI color support or disable GNU readline? Set the `DBG_NOCOLOR
 🪰 License:
 -
 
-	Copyright (c) 2024 Scott Lembcke and Howling Moon Software
+	Copyright (c) 2026 Scott Lembcke and Howling Moon Software
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal

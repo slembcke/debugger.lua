@@ -1,9 +1,9 @@
 -- SPDX-License-Identifier: MIT
--- Copyright (c) 2024 Scott Lembcke and Howling Moon Software
+-- Copyright (c) 2026 Scott Lembcke and Howling Moon Software
 
 local template = [==[
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2024 Scott Lembcke and Howling Moon Software
+// Copyright (c) 2026 Scott Lembcke and Howling Moon Software
 
 /*
 	Using debugger.lua from C code is pretty straightforward.
