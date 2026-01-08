@@ -2,6 +2,8 @@
 
 You can find the new project page on [Codeberg](https://codeberg.org/slembcke/debugger.lua).
 
+At least for now, I will be supporting the project on both sites, but eventually I plan to eventually drop GitHub entirely.
+
 To migrate an existing checkout, you can use the following command, or make a new checkout of the project from the new location.
 
 ```
@@ -16,7 +18,7 @@ You may additionally need to run `git checkout .` to cleanup the deleted files. 
 
 *sigh...* Roll your eyes at my principles if you must, but I do not want to be a willing participant in this grand LLM experiment.
 
-I feel like the writing has been on the wall since Microsoft bought GitHub in 2018. Sure, they've done some nice Open Source things like .NET Core, VSCode, and... uh... Windows Terminal I guess? We've known for a while now what Microsoft thinks Open Source is for: selling it as a service while removing the license terms in a quasi-legal way. As of 2026, the site is quasi-unusable if you aren't logged in. You get get rate limited into oblivion, presumably because they are upset that other AI companies are scraping them. Incredible hypocrisy.
+I feel like the writing has been on the wall since Microsoft bought GitHub in 2018. Sure, they've done some nice Open Source things like .NET Core, VSCode, and... uh... Windows Terminal I guess? We've known for a while now what Microsoft thinks Open Source is for: selling it as a service while removing the license terms in a quasi-legal way. The site is even quasi-unusable now if you aren't logged in. You get get rate limited into oblivion, presumably because they are upset that other AI companies are scraping them. Incredible hypocrisy.
 
 Meanwhile their CEO shares a quote, ["Either you have to embrace the AI, or you get out of your career"](https://web.archive.org/web/20250805051200/https://ashtom.github.io/developers-reinvented). He then [promptly quit](https://github.blog/news-insights/company-news/goodbye-github/) leaving GitHub to be managed by the CoreAI team. So yeah... that's what Microsoft thinks Open Source is for: Something that can be hoarded, mined for profit, and sold back to the people that made it. (They certainly don't train it on their own code, oh goodness no... Keep that stuff secret!) At the very same time they are arguing that [the public should be the ones paying for the development](https://github.blog/open-source/maintainers/we-need-a-european-sovereign-tech-fund/) of the Open Source code they train on. How convenient!
 

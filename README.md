@@ -11,6 +11,8 @@ debugger.lua is a simple, single file, pure Lua debugger that is easy to integra
 
 You can find the new project page on [Codeberg](https://codeberg.org/slembcke/debugger.lua).
 
+At least for now, I will be supporting the project on both sites, but eventually I plan to eventually drop GitHub entirely.
+
 To migrate an existing checkout, you can use the following command, or make a new checkout of the project from the new location.
 
 ```
