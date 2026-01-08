@@ -7,6 +7,23 @@ A simple, embedabble debugger for Lua 5.x, and LuaJIT 2.x.
 
 debugger.lua is a simple, single file, pure Lua debugger that is easy to integrate with any project. The lua-users wiki lists a [number of debuggers](http://lua-users.org/wiki/DebuggingLuaCode). clidebugger was closest to what I was looking for, but I ran into several compatibility issues, and the rest are pretty big libraries with a whole lot of dependencies. I just wanted something simple to integrate that would work through stdin/stdout. I also decided that it sounded fun to try and make my own!
 
+h2. This Project has Moved!
+
+You can find the new project page on [Codeberg](https://codeberg.org/slembcke/debugger.lua).
+
+To migrate an existing checkout, you can use the following command, or make a new checkout of the project from the new location.
+
+```
+git remote set-url origin https://codeberg.org/slembcke/debugger.lua
+git fetch origin master
+git reset origin/master
+```
+
+You may additionally need to run `git checkout .` to cleanup the deleted files. *This will also discard your local changes if you have made any.*
+
+To read more about why this project moved, you can read about it in [PROJECT_HAS_MOVED.md](PROJECT_HAS_MOVED.md).
+
+
 ✅ Features
 -
 
